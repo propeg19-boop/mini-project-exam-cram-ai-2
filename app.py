@@ -1,103 +1,139 @@
-# app.py — ExamCram AI: Main Flask Application
-# ─────────────────────────────────────────────
-# Entry point. All 3 routes are defined here.
-# Each route delegates its logic to utils/.
+"""
+app.py — ExamCram AI Flask Backend
+Routes: /generate-plan, /generate-answer, /get-images
+"""
 
-from flask import Flask, request, jsonify, render_template
+import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
-from utils.priority import build_study_plan
-from utils.ai_handler import generate_answer
-from utils.image_fetcher import fetch_images
 
-# Load API keys from .env
+# Load .env before importing utils (they read env vars at call time, not import time)
 load_dotenv()
 
+from utils.ai_handler    import generate_plan, generate_answer
+from utils.image_fetcher import fetch_images
+from utils.priority      import split_questions, build_table, build_day_plan
+
+# ─── App setup ───────────────────────────────────────────────────────────────
 app = Flask(__name__)
+CORS(app)   # Allow requests from the frontend (any origin)
 
 
-# ─────────────────────────────────────────────
-# ROUTE 0: /
-# Serves the frontend HTML page.
-# Flask looks for index.html in the templates/ folder.
-# ─────────────────────────────────────────────
-@app.route("/")
-def home():
-    return render_template("index.html")
+# ─── Health check ────────────────────────────────────────────────────────────
+@app.route("/", methods=["GET"])
+def health():
+    return jsonify({"status": "ExamCram AI backend is running ✅"})
 
 
-# ─────────────────────────────────────────────
-# ROUTE 1: /generate-plan
-# Accepts questions + study context.
-# Returns a priority table and day-by-day plan.
-# ─────────────────────────────────────────────
+# ─── /generate-plan ──────────────────────────────────────────────────────────
 @app.route("/generate-plan", methods=["POST"])
-def generate_plan():
-    data = request.get_json()
+def route_generate_plan():
+    """
+    Accepts: { questions, days, level, tone }
+    Returns: { table, day_plan, meta }
+    """
+    try:
+        body      = request.get_json(force=True) or {}
+        questions = body.get("questions", "").strip()
+        days      = int(body.get("days", 5))
+        level     = body.get("level", "intermediate")
+        tone      = body.get("tone", "casual")
 
-    # Validate all required fields are present
-    for field in ["questions", "days", "level", "tone"]:
-        if field not in data:
-            return jsonify({"error": f"Missing field: '{field}'"}), 400
+        if not questions:
+            return jsonify({"error": "No questions provided"}), 400
 
-    questions_raw = data["questions"]   # newline-separated string
-    days          = int(data["days"])
-    level         = data["level"]       # e.g. "beginner", "advanced"
-    tone          = data["tone"]        # e.g. "formal", "casual"
+        # ── Strategy: try Gemini first, fall back to local classifier ──────
+        try:
+            result = generate_plan(questions, days, level, tone)
 
-    # Split raw string into individual question lines
-    questions = [q.strip() for q in questions_raw.strip().split("\n") if q.strip()]
+            # Safety net: if Gemini didn't return a proper table, rebuild locally
+            if not result.get("table"):
+                raise ValueError("Gemini returned empty table")
 
-    if not questions:
-        return jsonify({"error": "No questions found. Put each question on a new line."}), 400
+            return jsonify(result)
 
-    result = build_study_plan(questions, days, level, tone)
-    return jsonify(result), 200
+        except Exception as ai_err:
+            print(f"[Plan] AI failed ({ai_err}), using local classifier fallback")
+
+            # Local fallback — no AI needed
+            q_list   = split_questions(questions)
+            table    = build_table(q_list)
+            day_plan = build_day_plan(table, days)
+
+            return jsonify({
+                "table":    table,
+                "day_plan": day_plan,
+                "meta":     {"days": days, "total": len(q_list)},
+            })
+
+    except Exception as e:
+        print(f"[Plan] Unhandled error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
-# ─────────────────────────────────────────────
-# ROUTE 2: /generate-answer
-# Sends a question to Gemini AI and returns
-# a structured 4-section answer.
-# ─────────────────────────────────────────────
+# ─── /generate-answer ────────────────────────────────────────────────────────
 @app.route("/generate-answer", methods=["POST"])
-def answer():
-    data = request.get_json()
+def route_generate_answer():
+    """
+    Accepts: { question, mode, level, tone }
+    Returns: { analogy, understanding, answer, extra }  (exam mode: just { answer })
+    """
+    try:
+        body     = request.get_json(force=True) or {}
+        question = body.get("question", "").strip()
+        mode     = body.get("mode", "focused")
+        level    = body.get("level", "intermediate")
+        tone     = body.get("tone", "casual")
 
-    for field in ["question", "mode", "level", "tone"]:
-        if field not in data:
-            return jsonify({"error": f"Missing field: '{field}'"}), 400
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
 
-    question = data["question"]
-    mode     = data["mode"]    # "focused" or "quick"
-    level    = data["level"]
-    tone     = data["tone"]
+        result = generate_answer(question, mode, level, tone)
+        return jsonify(result)
 
-    if mode not in ("focused", "quick"):
-        return jsonify({"error": "Mode must be 'focused' or 'quick'"}), 400
+    except Exception as e:
+        print(f"[Answer] Unhandled error: {e}")
+        # Always return valid JSON so the frontend doesn't break
+        return jsonify({
+            "answer":       f"Could not generate answer: {str(e)}",
+            "analogy":      "",
+            "understanding": "",
+            "extra":        "Please check your API key and try again.",
+        }), 500
 
-    result = generate_answer(question, mode, level, tone)
-    return jsonify(result), 200
 
-
-# ─────────────────────────────────────────────
-# ROUTE 3: /get-images
-# Fetches diagram images from SerpAPI
-# (Google Images) for a given topic.
-# ─────────────────────────────────────────────
+# ─── /get-images ─────────────────────────────────────────────────────────────
 @app.route("/get-images", methods=["POST"])
-def get_images():
-    data = request.get_json()
+def route_get_images():
+    """
+    Accepts: { topic }
+    Returns: { images: [url, url, url] }
+    """
+    try:
+        body  = request.get_json(force=True) or {}
+        topic = body.get("topic", "").strip()
 
-    if "topic" not in data:
-        return jsonify({"error": "Missing field: 'topic'"}), 400
+        if not topic:
+            return jsonify({"error": "No topic provided"}), 400
 
-    topic  = data["topic"]
-    result = fetch_images(topic)
-    return jsonify(result), 200
+        images = fetch_images(topic)
+        return jsonify({"images": images})
+
+    except Exception as e:
+        print(f"[Images] Unhandled error: {e}")
+        return jsonify({
+            "images": [
+                "https://placehold.co/640x400/13131f/9333ea?text=Error",
+                "https://placehold.co/640x400/13131f/06b6d4?text=Error",
+                "https://placehold.co/640x400/13131f/ec4899?text=Error",
+            ]
+        }), 500
 
 
-# ─────────────────────────────────────────────
-# Start the server (debug=True for development)
-# ─────────────────────────────────────────────
+# ─── Run ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("DEBUG", "true").lower() == "true"
+    print(f"🚀 ExamCram AI backend starting on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=debug)
