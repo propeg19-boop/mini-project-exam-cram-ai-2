@@ -4,20 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>ExamCram AI — Smart Study Planner</title>
-
-<!-- Upgraded Typography: Inter for clean UI, JetBrains Mono for tech elements -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-
-<!-- Professional SVG Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
-
 <style>
-/* ═══ ROOT TOKENS ═══ */
 :root {
   --black:      #080810;
-  --surface:    rgba(14, 14, 26, 0.5); /* Adjusted for glassmorphism */
+  --surface:    rgba(14, 14, 26, 0.5);
   --card:       rgba(19, 19, 31, 0.65);
   --border:     rgba(255, 255, 255, 0.08);
   --border-h:   rgba(255, 255, 255, 0.15);
@@ -33,30 +27,19 @@
   --font-main:  'Inter', sans-serif;
   --font-mono:  'JetBrains Mono', monospace;
 }
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{
   background: radial-gradient(circle at 50% 0%, #151025 0%, var(--black) 50%);
-  color:var(--text);
-  font-family:var(--font-main);
-  font-size:14px;
-  line-height:1.6;
-  min-height:100vh;
-  overflow-x:hidden;
+  color:var(--text);font-family:var(--font-main);font-size:14px;line-height:1.6;
+  min-height:100vh;overflow-x:hidden;
 }
-
-/* scanlines */
 body::before{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px);
 }
-
 #app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px 80px;}
-
 .icon { width: 16px; height: 16px; stroke-width: 2; display: inline-flex; }
-
-/* ═══ HEADER ═══ */
 header{
   padding:44px 0 28px;display:flex;align-items:flex-end;
   justify-content:space-between;border-bottom:1px solid var(--border);margin-bottom:32px;
@@ -68,8 +51,6 @@ header{
 .badge{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:4px;border:1px solid;}
 .bp{border-color:rgba(147,51,234,0.5);color:#d8b4fe;background:rgba(147,51,234,0.08);}
 .bc{border-color:rgba(6,182,212,0.5);color:#67e8f9;background:rgba(6,182,212,0.08);}
-
-/* ═══ TABS ═══ */
 .tabs{
   display:flex;gap:4px;margin-bottom:28px;
   background:var(--surface);padding:6px;border-radius:12px;border:1px solid var(--border);
@@ -85,20 +66,12 @@ header{
   background:linear-gradient(135deg,rgba(147,51,234,.15),rgba(6,182,212,.08));
   color:var(--text);border:1px solid rgba(147,51,234,.35);box-shadow:var(--glow-p);
 }
-
-/* ═══ PANELS ═══ */
 .panel{display:none;animation:fadeUp .3s ease;}
 .panel.active{display:block;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-
-/* ═══ CARD (GLASSMORPHISM) ═══ */
 .card{
-  background:var(--card);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:28px;
-  margin-bottom:20px;
+  background:var(--card);backdrop-filter: blur(16px);-webkit-backdrop-filter: blur(16px);
+  border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
 .card-title{
@@ -109,8 +82,6 @@ header{
   content:'';display:inline-block;width:4px;height:14px;border-radius:2px;
   background:linear-gradient(180deg,var(--purple),var(--cyan));
 }
-
-/* ═══ FORMS ═══ */
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .form-group{display:flex;flex-direction:column;gap:6px;}
 label{font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);}
@@ -120,14 +91,10 @@ input,textarea,select{
   transition:all .2s;outline:none;width:100%;
 }
 input:focus,textarea:focus,select:focus{
-  border-color:var(--purple);
-  box-shadow:0 0 0 3px rgba(147,51,234,.15);
-  background:rgba(0,0,0,0.4);
+  border-color:var(--purple);box-shadow:0 0 0 3px rgba(147,51,234,.15);background:rgba(0,0,0,0.4);
 }
 textarea{resize:vertical;min-height:120px;}
 select option{background:#13131f;}
-
-/* ═══ BUTTONS ═══ */
 .btn{
   font-family:var(--font-main);font-size:13px;font-weight:600;
   padding:10px 20px;border:none;border-radius:10px;
@@ -141,8 +108,6 @@ select option{background:#13131f;}
 .btn-ghost:hover{border-color:var(--border-h);color:var(--text);background:rgba(255,255,255,0.03);}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
 .action-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
-
-/* ═══ MODE SELECTOR ═══ */
 .mode-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
 .mode-btn{
   padding:14px 10px;background:rgba(0,0,0,0.2);border:1px solid var(--border);
@@ -151,69 +116,47 @@ select option{background:#13131f;}
 }
 .mode-btn span { font-weight:400; }
 .mode-btn:hover{border-color:var(--border-h);color:var(--text);}
-.mode-btn.active{
-  border-color:var(--cyan);color:var(--cyan);
-  background:rgba(6,182,212,.08);box-shadow:var(--glow-c);
-}
-
-/* ═══ LOADER ═══ */
+.mode-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:var(--glow-c);}
 .loader{display:none;align-items:center;gap:12px;color:var(--muted);font-size:13px;padding:16px 0;font-weight:500;}
 .loader.show{display:flex;}
 .dots{display:flex;gap:5px;}
-.dots span{
-  width:8px;height:8px;border-radius:50%;background:var(--purple);
-  animation:dot 1.4s ease-in-out infinite;
-}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--purple);animation:dot 1.4s ease-in-out infinite;}
 .dots span:nth-child(2){animation-delay:.2s;background:var(--cyan);}
 .dots span:nth-child(3){animation-delay:.4s;}
 @keyframes dot{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
-
-/* ═══ STATS ═══ */
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
-.stat-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:16px;text-align:center;backdrop-filter: blur(8px);
-}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;backdrop-filter: blur(8px);}
 .stat-num{
   font-family:var(--font-main);font-size:32px;font-weight:800;
   background:linear-gradient(135deg,var(--purple),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;
 }
 .stat-lbl{font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
-
-/* ═══ BREAKDOWN ═══ */
 .breakdown-list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
 .breakdown-item{
-  display:flex;align-items:flex-start;gap:12px;
-  background:rgba(0,0,0,0.2);border:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:12px;background:rgba(0,0,0,0.2);border:1px solid var(--border);
   border-radius:10px;padding:14px;transition:all .2s;
 }
 .breakdown-item:hover{border-color:rgba(6,182,212,.3);background:rgba(6,182,212,.03);}
 .bd-num{
   width:28px;height:28px;border-radius:8px;flex-shrink:0;
   background:rgba(147,51,234,.15);border:1px solid rgba(147,51,234,.3);
-  color:#d8b4fe;font-size:12px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;
+  color:#d8b4fe;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;
 }
 .bd-text{flex:1;font-size:14px;color:var(--text);line-height:1.5;}
 .bd-tag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;flex-shrink:0;}
 .tag-h{background:rgba(236,72,153,.15);color:#f9a8d4;border:1px solid rgba(236,72,153,.3);}
 .tag-m{background:rgba(147,51,234,.15);color:#d8b4fe;border:1px solid rgba(147,51,234,.3);}
 .tag-l{background:rgba(6,182,212,.15);color:#67e8f9;border:1px solid rgba(6,182,212,.3);}
-
-/* ═══ PLAN TABLE ═══ */
 .plan-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:16px;font-size:14px;}
 .plan-table th{
   text-align:left;padding:12px 16px;font-size:11px;font-weight:600;
-  letter-spacing:1px;text-transform:uppercase;color:var(--muted);
-  border-bottom:1px solid var(--border);
+  letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);
 }
 .plan-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
 .plan-table tr:last-child td{border-bottom:none;}
 .plan-table tr:hover td{background:rgba(255,255,255,0.02);}
 .pill{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;}
-
-/* Day grid */
 .day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px;}
 .day-card{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:12px;padding:16px;}
 .day-label{
@@ -224,8 +167,6 @@ select option{background:#13131f;}
 .day-q{font-size:13px;color:var(--text);padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:8px;}
 .day-q:last-child{border-bottom:none;padding-bottom:0;}
 .day-q i{color:var(--purple);flex-shrink:0;margin-top:2px;width:14px;height:14px;}
-
-/* ═══ ANSWER GRID ═══ */
 .ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
 .ans-block{
   background:rgba(0,0,0,0.2);border:1px solid var(--border);
@@ -233,32 +174,23 @@ select option{background:#13131f;}
 }
 .ans-block:hover{border-color:rgba(147,51,234,.4);background:rgba(147,51,234,.02);}
 .ans-block.full{grid-column:1/-1;}
-.ans-label{
-  font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
-  color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px;
-}
+.ans-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .ans-label i{width:14px;height:14px;}
 .ans-text{color:var(--text);line-height:1.8;font-size:14px;white-space:pre-wrap;}
 .copy-btn{
-  position:absolute;top:16px;right:16px;background:transparent;
-  border:1px solid var(--border);border-radius:6px;color:var(--muted);
-  font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;
+  position:absolute;top:16px;right:16px;background:transparent;border:1px solid var(--border);
+  border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;
   font-family:var(--font-main);transition:all .2s;display:flex;align-items:center;gap:6px;
 }
 .copy-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,0.05);}
 .copy-btn.copied{border-color:var(--purple);color:var(--purple);}
-
-/* ═══ IMAGES ═══ */
 .img-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px;}
 .img-thumb{
-  aspect-ratio:16/10;border-radius:10px;overflow:hidden;
-  border:1px solid var(--border);background:rgba(0,0,0,0.3);
-  cursor:pointer;transition:all .3s;
+  aspect-ratio:16/10;border-radius:10px;overflow:hidden;border:1px solid var(--border);
+  background:rgba(0,0,0,0.3);cursor:pointer;transition:all .3s;
 }
 .img-thumb:hover{border-color:var(--cyan);transform:scale(1.03);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
 .img-thumb img{width:100%;height:100%;object-fit:cover;}
-
-/* ═══ TIMER ═══ */
 .timer-wrap{display:flex;flex-direction:column;align-items:center;padding:32px 0;}
 .ring-wrap{position:relative;width:240px;height:240px;margin-bottom:32px;}
 #tsvg{transform:rotate(-90deg);width:100%;height:100%;}
@@ -271,9 +203,8 @@ select option{background:#13131f;}
 .t-queue{width:100%;max-width:500px;background:rgba(0,0,0,0.2);padding:20px;border-radius:12px;border:1px solid var(--border);}
 .t-q-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
 .q-item{
-  display:flex;align-items:flex-start;gap:12px;padding:12px 16px;
-  border-radius:8px;border:1px solid var(--border);margin-bottom:8px;
-  font-size:13px;transition:all .2s;background:rgba(255,255,255,0.02);
+  display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:8px;
+  border:1px solid var(--border);margin-bottom:8px;font-size:13px;transition:all .2s;background:rgba(255,255,255,0.02);
 }
 .q-item.active{border-color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:var(--glow-c);}
 .q-item.done{opacity:.4;text-decoration:line-through;background:transparent;border-color:transparent;}
@@ -281,27 +212,21 @@ select option{background:#13131f;}
 .q-dot.pending{background:var(--muted);}
 .q-dot.active{background:var(--cyan);box-shadow:0 0 10px var(--cyan);}
 .q-dot.done{background:var(--purple);}
-
-/* ═══ TOAST ═══ */
 #toast{
   position:fixed;bottom:32px;right:32px;background:var(--card);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);-webkit-backdrop-filter: blur(16px);
   border:1px solid var(--border);border-radius:12px;padding:16px 24px;
   font-size:14px;font-weight:500;max-width:320px;z-index:999;display:none;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-  animation:slideIn .3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);animation:slideIn .3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 #toast.show{display:flex;align-items:center;gap:10px;}
 #toast.err{border-color:rgba(236,72,153,.5);}
 #toast.ok{border-color:rgba(6,182,212,.5);}
 @keyframes slideIn{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-
-/* ═══ MISC ═══ */
 .flex-between{display:flex;align-items:center;justify-content:space-between;}
 .hidden{display:none!important;}
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:12px;}
 .empty i{width:32px;height:32px;opacity:0.5;}
-
 @media(max-width:768px){
   .ans-grid,.form-row{grid-template-columns:1fr;}
   .mode-group{grid-template-columns:1fr;}
@@ -314,7 +239,6 @@ select option{background:#13131f;}
 <body>
 <div id="app">
 
-<!-- HEADER -->
 <header>
   <div>
     <div class="logo">Exam<span class="p">Cram</span><span class="c"> AI</span></div>
@@ -326,7 +250,6 @@ select option{background:#13131f;}
   </div>
 </header>
 
-<!-- TABS -->
 <nav class="tabs">
   <button class="tab-btn active" data-tab="breakdown" onclick="switchTab('breakdown')"><i data-lucide="file-scan"></i> Breakdown</button>
   <button class="tab-btn"        data-tab="planner"   onclick="switchTab('planner')"><i data-lucide="calendar-days"></i> Study Plan</button>
@@ -334,7 +257,7 @@ select option{background:#13131f;}
   <button class="tab-btn"        data-tab="timer"     onclick="switchTab('timer')"><i data-lucide="timer"></i> Timer</button>
 </nav>
 
-<!-- ══════════ TAB: BREAKDOWN ══════════ -->
+<!-- TAB: BREAKDOWN -->
 <div class="panel active" id="tab-breakdown">
   <div class="card">
     <div class="card-title">Question Breakdown</div>
@@ -366,7 +289,6 @@ select option{background:#13131f;}
     </div>
     <div class="loader" id="bd-loader"><div class="dots"><span></span><span></span><span></span></div><span>Analysing paper syntax...</span></div>
   </div>
-
   <div id="bd-results" class="hidden">
     <div class="stats-row" id="bd-stats"></div>
     <div class="card">
@@ -382,7 +304,7 @@ select option{background:#13131f;}
   </div>
 </div>
 
-<!-- ══════════ TAB: PLANNER ══════════ -->
+<!-- TAB: PLANNER -->
 <div class="panel" id="tab-planner">
   <div class="card">
     <div class="card-title">Study Plan Generator</div>
@@ -420,7 +342,6 @@ select option{background:#13131f;}
     </div>
     <div class="loader" id="pl-loader"><div class="dots"><span></span><span></span><span></span></div><span>Building your priority matrix...</span></div>
   </div>
-
   <div id="pl-results" class="hidden">
     <div class="stats-row" id="pl-stats"></div>
     <div class="card">
@@ -439,7 +360,7 @@ select option{background:#13131f;}
   </div>
 </div>
 
-<!-- ══════════ TAB: ANSWERS ══════════ -->
+<!-- TAB: ANSWERS -->
 <div class="panel" id="tab-answer">
   <div class="card">
     <div class="card-title">Answer Generation Mode</div>
@@ -486,11 +407,9 @@ select option{background:#13131f;}
     </div>
     <div class="loader" id="ans-loader"><div class="dots"><span></span><span></span><span></span></div><span id="ans-loader-msg">Processing query...</span></div>
   </div>
-
   <div id="ans-out" class="hidden">
     <div class="ans-grid" id="ans-grid"></div>
   </div>
-
   <div id="img-out" class="hidden">
     <div class="card" style="margin-top:20px">
       <div class="flex-between" style="margin-bottom:12px">
@@ -502,12 +421,11 @@ select option{background:#13131f;}
   </div>
 </div>
 
-<!-- ══════════ TAB: TIMER ══════════ -->
+<!-- TAB: TIMER -->
 <div class="panel" id="tab-timer">
   <div class="card">
     <div class="card-title">Revision Timer</div>
     <div class="timer-wrap">
-      <!-- Ring -->
       <div class="ring-wrap">
         <svg id="tsvg" viewBox="0 0 200 200">
           <defs>
@@ -524,22 +442,16 @@ select option{background:#13131f;}
           <div class="t-sub"  id="t-sub">Ready</div>
         </div>
       </div>
-
-      <!-- Controls -->
       <div class="t-controls">
         <button class="btn btn-primary" id="btn-start" onclick="tStart()"><i data-lucide="play" class="icon"></i> Start</button>
         <button class="btn btn-ghost"   id="btn-pause" onclick="tPause()" disabled><i data-lucide="pause" class="icon"></i> Pause</button>
         <button class="btn btn-ghost"   onclick="tReset()"><i data-lucide="rotate-ccw" class="icon"></i> Reset</button>
       </div>
-
-      <!-- Custom time -->
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:32px">
         <label style="font-size:11px;color:var(--muted)">Session (mins):</label>
         <input type="number" id="t-mins" value="25" min="1" max="90" style="width:80px;text-align:center;padding:10px"/>
         <button class="btn btn-ghost" style="padding:10px 16px;font-size:12px" onclick="tSetCustom()">Set</button>
       </div>
-
-      <!-- Queue -->
       <div class="t-queue">
         <div class="t-q-title"><i data-lucide="list-todo"></i> Active Question Queue</div>
         <div id="t-queue-list">
@@ -550,40 +462,37 @@ select option{background:#13131f;}
   </div>
 </div>
 
-</div><!-- /app -->
+</div>
 <div id="toast"></div>
 
 <script>
-/* ══════════════════════════════════════
-   ICONS INIT
-══════════════════════════════════════ */
+/* ══ ICONS ══ */
 lucide.createIcons();
-function refreshIcons() {
-  if(window.lucide) { lucide.createIcons(); }
-}
+function refreshIcons() { if(window.lucide) lucide.createIcons(); }
 
-/* ══════════════════════════════════════
-   CONFIG & STATE
-══════════════════════════════════════ */
-const BASE = ''; 
-let mode      = 'focused';
-let detected  = [];
+/* ══ STATE ══ */
+const BASE = '';
+let mode     = 'focused';
+let detected = [];
 let tInterval = null, tSec = 1500, tTotal = 1500, tRunning = false;
 let tQueue = [], tIdx = 0;
 
 /* ══════════════════════════════════════
-   TABS
+   TABS — PATCHED: loads queue from backend when Timer tab opens
 ══════════════════════════════════════ */
 function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+
+  // Auto-load queue from backend if Timer tab opens and local queue is empty
+  if (name === 'timer' && tQueue.length === 0) {
+    loadQueueFromBackend();
+  }
 }
 
-/* ══════════════════════════════════════
-   TOAST
-══════════════════════════════════════ */
+/* ══ TOAST ══ */
 function toast(msg, type = 'ok') {
   const t = document.getElementById('toast');
   const icon = type === 'err' ? '<i data-lucide="alert-circle"></i>' : '<i data-lucide="check-circle-2"></i>';
@@ -593,18 +502,14 @@ function toast(msg, type = 'ok') {
   setTimeout(() => t.className = '', 3500);
 }
 
-/* ══════════════════════════════════════
-   MODE
-══════════════════════════════════════ */
+/* ══ MODE ══ */
 function setMode(m) {
   mode = m;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`[data-mode="${m}"]`).classList.add('active');
 }
 
-/* ══════════════════════════════════════
-   UTILS
-══════════════════════════════════════ */
+/* ══ UTILS ══ */
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -619,9 +524,8 @@ function guessPri(q) {
   if (/\b(analyze|analyse|compare|derive|evaluate|differentiate|contrast|justify|assess)\b/.test(t)) return 'Low';
   return 'Medium';
 }
-
 function pillClass(p) { return p === 'High' ? 'tag-h' : p === 'Medium' ? 'tag-m' : 'tag-l'; }
-function tagClass(p)  { return p === 'High' ? 'tag-h'  : p === 'Medium' ? 'tag-m'  : 'tag-l'; }
+function tagClass(p)  { return p === 'High' ? 'tag-h' : p === 'Medium' ? 'tag-m' : 'tag-l'; }
 
 function copyText(el, btn) {
   navigator.clipboard.writeText(el.textContent).then(() => {
@@ -631,19 +535,15 @@ function copyText(el, btn) {
   });
 }
 
-/* ══════════════════════════════════════
-   BREAKDOWN
-══════════════════════════════════════ */
+/* ══ BREAKDOWN ══ */
 function runBreakdown() {
   const raw = document.getElementById('bd-input').value.trim();
   if (!raw) { toast('Paste your question paper first', 'err'); return; }
-
   const lines = raw.split('\n')
     .map(l => l.replace(/^[\s]*\d+[.)]\s*/,'')
                .replace(/^[\s]*[A-Za-z][.)]\s*/,'')
                .replace(/^Q\d+\.?\s*/i,'').trim())
     .filter(l => l.length > 3);
-
   if (!lines.length) { toast('No valid questions detected', 'err'); return; }
   detected = lines;
   renderBreakdown(lines);
@@ -685,26 +585,59 @@ function sendToPlanner() {
   toast('Data synced to Study Plan');
 }
 
-function sendToTimer() {
+/* ══════════════════════════════════════
+   sendToTimer — PATCHED: also saves queue to backend for persistence
+══════════════════════════════════════ */
+async function sendToTimer() {
   if (!detected.length) return;
+
+  // Set local JS state immediately (instant UI)
   tQueue = detected.map(q => ({ text: q, done: false }));
-  tIdx = 0;
+  tIdx   = 0;
   renderQueue();
   switchTab('timer');
   toast('Session loaded in Timer');
+
+  // Persist to backend so queue survives tab switches
+  try {
+    await fetch(`${BASE}/save-queue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questions: detected })
+    });
+  } catch(e) {
+    console.warn('[Timer] Could not save queue to backend:', e);
+    // Non-fatal — queue is already in JS memory
+  }
 }
 
 /* ══════════════════════════════════════
-   STUDY PLANNER
+   loadQueueFromBackend — NEW: restores queue when Timer tab opens empty
 ══════════════════════════════════════ */
+async function loadQueueFromBackend() {
+  try {
+    const res  = await fetch(`${BASE}/get-queue`);
+    const data = await res.json();
+    const qs   = data.questions || [];
+    if (qs.length > 0) {
+      tQueue = qs; // each item is already { text, done }
+      tIdx   = qs.findIndex(q => !q.done);
+      if (tIdx < 0) tIdx = 0;
+      renderQueue();
+      toast(`${qs.length} questions restored in Timer`);
+    }
+  } catch(e) {
+    console.warn('[Timer] Could not load queue from backend:', e);
+  }
+}
+
+/* ══ STUDY PLANNER ══ */
 async function generatePlan() {
   const questions = document.getElementById('pl-questions').value.trim();
   const days      = parseInt(document.getElementById('pl-days').value) || 5;
   const level     = document.getElementById('pl-level').value;
   const tone      = document.getElementById('pl-tone').value;
-
   if (!questions) { toast('Enter questions to generate plan', 'err'); return; }
-
   showL('pl-loader');
   document.getElementById('pl-results').classList.add('hidden');
   try {
@@ -727,7 +660,6 @@ function renderPlan({ table, day_plan, meta }) {
     <div class="stat-card"><div class="stat-num">${table.length}</div><div class="stat-lbl">Targets</div></div>
     <div class="stat-card"><div class="stat-num">${meta?.days || Object.keys(day_plan).length}</div><div class="stat-lbl">Days</div></div>
     <div class="stat-card"><div class="stat-num" style="color:#f9a8d4;-webkit-text-fill-color:#f9a8d4">${h}</div><div class="stat-lbl">Critical Priority</div></div>`;
-
   const tbody = document.getElementById('pl-tbody');
   tbody.innerHTML = '';
   table.forEach((row, i) => {
@@ -741,7 +673,6 @@ function renderPlan({ table, day_plan, meta }) {
             onclick="quickAns('${escA(row.question)}')">Answer <i data-lucide="chevron-right" class="icon"></i></button></td>
       </tr>`;
   });
-
   const dg = document.getElementById('pl-days-grid');
   dg.innerHTML = '';
   for (const [day, qs] of Object.entries(day_plan)) {
@@ -751,7 +682,6 @@ function renderPlan({ table, day_plan, meta }) {
         ${qs.map(q => `<div class="day-q"><i data-lucide="corner-down-right"></i> <span>${esc(q)}</span></div>`).join('')}
       </div>`;
   }
-
   document.getElementById('pl-results').classList.remove('hidden');
   refreshIcons();
 }
@@ -766,20 +696,16 @@ function quickAns(q) {
   switchTab('answer');
 }
 
-/* ══════════════════════════════════════
-   ANSWER GENERATOR
-══════════════════════════════════════ */
+/* ══ ANSWER GENERATOR ══ */
 async function generateAnswer() {
   const question = document.getElementById('ans-q').value.trim();
   const level    = document.getElementById('ans-level').value;
   const tone     = document.getElementById('ans-tone').value;
   if (!question) { toast('Provide a question first', 'err'); return; }
-
   const msgs = { focused:'Running deep extraction...', quick:'Synthesizing bullets...', exam:'Formatting exam layout...' };
   document.getElementById('ans-loader-msg').textContent = msgs[mode];
   showL('ans-loader');
   document.getElementById('ans-out').classList.add('hidden');
-
   try {
     const res  = await fetch(`${BASE}/generate-answer`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -797,7 +723,6 @@ async function generateAnswer() {
 function renderAnswer(data) {
   const grid = document.getElementById('ans-grid');
   grid.innerHTML = '';
-
   if (mode === 'exam') {
     grid.innerHTML = ansBlock('file-text', 'Exam Outline', data.answer, true);
   } else {
@@ -811,7 +736,7 @@ function renderAnswer(data) {
 }
 
 function ansBlock(icon, label, text, full = false) {
-  const id   = 'ab' + Math.random().toString(36).slice(2,8);
+  const id = 'ab' + Math.random().toString(36).slice(2,8);
   return `
     <div class="ans-block ${full?'full':''}">
       <div class="ans-label"><i data-lucide="${icon}"></i> ${label}</div>
@@ -826,18 +751,14 @@ function clearAnswer() {
   document.getElementById('img-out').classList.add('hidden');
 }
 
-/* ══════════════════════════════════════
-   IMAGES
-══════════════════════════════════════ */
+/* ══ IMAGES ══ */
 async function fetchImages() {
   const q = document.getElementById('ans-q').value.trim();
   if (!q) { toast('Enter a topic to fetch diagrams', 'err'); return; }
   const topic = q.split(' ').slice(0,4).join(' ');
-
   document.getElementById('ans-loader-msg').textContent = 'Fetching visual assets...';
   showL('ans-loader');
   document.getElementById('img-out').classList.add('hidden');
-
   try {
     const res  = await fetch(`${BASE}/get-images`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -860,17 +781,14 @@ function renderImages(urls) {
   refreshIcons();
 }
 
-/* ══════════════════════════════════════
-   TIMER
-══════════════════════════════════════ */
-const CIRC = 2 * Math.PI * 88; // 553
+/* ══ TIMER ══ */
+const CIRC = 2 * Math.PI * 88;
 
 function tFmt(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
 
 function tRender() {
   document.getElementById('t-time').textContent = tFmt(tSec);
-  const bar = document.getElementById('t-bar');
-  bar.style.strokeDashoffset = CIRC * (1 - tSec / tTotal);
+  document.getElementById('t-bar').style.strokeDashoffset = CIRC * (1 - tSec / tTotal);
   document.getElementById('t-sub').textContent = tQueue.length
     ? `Target ${tIdx+1} of ${tQueue.length}` : 'System Ready';
 }
@@ -904,7 +822,16 @@ function tPause() {
   document.getElementById('btn-pause').disabled = true;
 }
 
-function tReset() { tPause(); tSec = tTotal; tRender(); }
+/* ══════════════════════════════════════
+   tReset — PATCHED: also clears backend queue
+══════════════════════════════════════ */
+function tReset() {
+  tPause();
+  tSec = tTotal;
+  tRender();
+  // Clear backend queue on reset
+  fetch(`${BASE}/clear-queue`, { method: 'POST' }).catch(() => {});
+}
 
 function tSetCustom() {
   const m = parseInt(document.getElementById('t-mins').value) || 25;
