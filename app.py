@@ -10,7 +10,7 @@ Endpoints:
 """
 
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 
 from utils.input_processor import clean_input, split_into_topics, detect_input_type
@@ -37,6 +37,15 @@ CORS(app)  # Allow frontend on any origin during development
 
 
 # ─── Health Check ─────────────────────────────────────────
+
+
+# --- Serve Frontend ---
+
+@app.route("/", methods=["GET"])
+def index():
+    """Serve the frontend HTML from templates/index.html"""
+    return render_template("index.html")
+
 
 @app.route("/health", methods=["GET"])
 def health():
