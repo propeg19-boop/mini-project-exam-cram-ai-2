@@ -1,184 +1,206 @@
-"""
-app.py — ExamCram AI Flask Backend
-Routes: /, /generate-plan, /generate-answer, /get-images, /save-queue, /get-queue
-"""
-
-import os
-from flask import Flask, request, jsonify, render_template, session
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+import os
+import json
+import traceback
+
+from utils.ai_handler import call_ai, generate_plan_prompt, generate_answer_prompt
+from utils.input_intelligence import analyse_input, parse_syllabus, generate_questions_from_syllabus, predict_exam_questions
+from utils.priority import classify_question, build_table, build_day_plan
+from utils.image_fetcher import fetch_images
 
 load_dotenv()
 
-from utils.ai_handler    import generate_plan, generate_answer
-from utils.image_fetcher import fetch_images
-from utils.priority      import split_questions, build_table, build_day_plan
-
-# ─── App setup ───────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "examcram-secret-dev-key-change-in-prod")
-CORS(app, supports_credentials=True)
+CORS(app)
 
-# In-memory queue store (simple dict keyed by session)
-# Fine for single-user/dev; swap for Redis in production
-_queue_store: dict = {}
+SECRET_KEY = os.getenv('SECRET_KEY', 'examcram-secret-key')
+app.secret_key = SECRET_KEY
 
+# In-memory queue store
+_queue_store = {}
 
-# ─── Frontend ────────────────────────────────────────────────────────────────
-@app.route("/", methods=["GET"])
-def home():
-    return render_template("index.html")
+# ─── ROUTES ───
 
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# ─── /generate-plan ──────────────────────────────────────────────────────────
-@app.route("/generate-plan", methods=["POST"])
-def route_generate_plan():
+@app.route('/analyse-input', methods=['POST'])
+def analyse_input_route():
     try:
-        body      = request.get_json(force=True) or {}
-        questions = body.get("questions", "").strip()
-        days      = int(body.get("days", 5))
-        level     = body.get("level", "intermediate")
-        tone      = body.get("tone", "casual")
+        data = request.get_json()
+        content = data.get('content', '')
+        result = analyse_input(content)
+        return jsonify(result)
+    except Exception as e:
+        print(f'[AnalyseInputError: {str(e)}]')
+        traceback.print_exc()
+        # Fallback classification
+        text_lower = content.lower()
+        keywords = ['define', 'explain', 'analyze', 'compare', 'what', 'why', 'how', 'describe', 'discuss', 'evaluate']
+        count = sum(1 for k in keywords if k in text_lower)
+        q_type = 'question_bank' if count > 3 else 'syllabus'
+        return jsonify({
+            'type': q_type,
+            'confidence': 50,
+            'subject': 'General',
+            'question_count': content.count('?') if q_type == 'question_bank' else 0,
+            'unit_count': 0
+        })
 
-        if not questions:
-            return jsonify({"error": "No questions provided"}), 400
+@app.route('/parse-syllabus', methods=['POST'])
+def parse_syllabus_route():
+    try:
+        data = request.get_json()
+        content = data.get('content', '')
+        subject = data.get('subject', 'General')
+        result = parse_syllabus(content, subject)
+        return jsonify(result)
+    except Exception as e:
+        print(f'[ParseSyllabusError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'units': [], 'total_topics': 0})
 
-        try:
-            result = generate_plan(questions, days, level, tone)
-            if not result.get("table"):
-                raise ValueError("AI returned empty table")
+@app.route('/generate-questions', methods=['POST'])
+def generate_questions_route():
+    try:
+        data = request.get_json()
+        units = data.get('units', [])
+        level = data.get('level', 'intermediate')
+        subject = data.get('subject', 'General')
+        result = generate_questions_from_syllabus(units, level, subject)
+        return jsonify(result)
+    except Exception as e:
+        print(f'[GenerateQuestionsError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'questions': []})
+
+@app.route('/predict-exam', methods=['POST'])
+def predict_exam_route():
+    try:
+        data = request.get_json()
+        questions = data.get('questions', [])
+        subject = data.get('subject', 'General')
+        level = data.get('level', 'intermediate')
+        days = data.get('days', 5)
+        result = predict_exam_questions(questions, subject, level, days)
+        return jsonify(result)
+    except Exception as e:
+        print(f'[PredictExamError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'predicted': []})
+
+@app.route('/generate-plan', methods=['POST'])
+def generate_plan_route():
+    try:
+        data = request.get_json()
+        questions_text = data.get('questions', '')
+        days = int(data.get('days', 5))
+        level = data.get('level', 'intermediate')
+        tone = data.get('tone', 'casual')
+
+        # Try AI first
+        prompt = generate_plan_prompt(questions_text, days, level, tone)
+        ai_result = call_ai(prompt)
+
+        if ai_result and 'table' in ai_result:
+            return jsonify(ai_result)
+
+        # Fallback to local logic
+        questions = [q.strip() for q in questions_text.split('\n') if q.strip()]
+        table = build_table(questions)
+        day_plan = build_day_plan(table, days)
+        return jsonify({
+            'table': table,
+            'day_plan': day_plan,
+            'meta': {'days': days, 'total': len(questions)}
+        })
+    except Exception as e:
+        print(f'[GeneratePlanError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'table': [], 'day_plan': {}, 'meta': {'days': 5, 'total': 0}})
+
+@app.route('/generate-answer', methods=['POST'])
+def generate_answer_route():
+    try:
+        data = request.get_json()
+        question = data.get('question', '')
+        mode = data.get('mode', 'focused')
+        level = data.get('level', 'intermediate')
+        tone = data.get('tone', 'casual')
+
+        prompt = generate_answer_prompt(question, mode, level, tone)
+        result = call_ai(prompt)
+
+        if result:
             return jsonify(result)
 
-        except Exception as ai_err:
-            print(f"[Plan] AI failed ({ai_err}), using local fallback")
-            q_list   = split_questions(questions)
-            table    = build_table(q_list)
-            day_plan = build_day_plan(table, days)
-            return jsonify({
-                "table":    table,
-                "day_plan": day_plan,
-                "meta":     {"days": days, "total": len(q_list)},
-            })
-
-    except Exception as e:
-        print(f"[Plan] Error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-# ─── /generate-answer ────────────────────────────────────────────────────────
-@app.route("/generate-answer", methods=["POST"])
-def route_generate_answer():
-    try:
-        body     = request.get_json(force=True) or {}
-        question = body.get("question", "").strip()
-        mode     = body.get("mode", "focused")
-        level    = body.get("level", "intermediate")
-        tone     = body.get("tone", "casual")
-
-        if not question:
-            return jsonify({"error": "No question provided"}), 400
-
-        result = generate_answer(question, mode, level, tone)
-        return jsonify(result)
-
-    except Exception as e:
-        print(f"[Answer] Error: {e}")
+        # Fallback
+        if mode == 'exam':
+            return jsonify({'answer': f'**Answer:**\n\n{question} is an important concept. Start with a clear definition, provide 2-3 key points with examples, and conclude with a summary statement. Time allocation: approximately 15-20 minutes for a complete answer.'})
         return jsonify({
-            "answer":        f"Could not generate answer: {str(e)}",
-            "analogy":       "",
-            "understanding": "",
-            "extra":         "Check your API key or try again.",
-        }), 500
+            'analogy': 'Think of this like building a house — you need a strong foundation before adding details.',
+            'understanding': 'The core idea is understanding relationships between key concepts.',
+            'answer': f'**Detailed Answer:**\n\n{question}\n\n1. **Definition**: Start with a precise academic definition.\n2. **Key Components**: Break down into 3-4 main parts.\n3. **Examples**: Provide concrete real-world applications.\n4. **Connections**: Link to related concepts in the syllabus.',
+            'extra': '**Exam Tip**: This topic frequently appears in 4-6 mark questions. Practice writing a concise answer within 15 minutes.'
+        })
+    except Exception as e:
+        print(f'[GenerateAnswerError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'answer': 'Unable to generate answer at this time. Please try again.'})
 
-
-# ─── /get-images ─────────────────────────────────────────────────────────────
-@app.route("/get-images", methods=["POST"])
-def route_get_images():
+@app.route('/get-images', methods=['POST'])
+def get_images_route():
     try:
-        body  = request.get_json(force=True) or {}
-        topic = body.get("topic", "").strip()
-
-        if not topic:
-            return jsonify({"error": "No topic provided"}), 400
-
+        data = request.get_json()
+        topic = data.get('topic', '')
         images = fetch_images(topic)
-        return jsonify({"images": images})
-
+        return jsonify({'images': images})
     except Exception as e:
-        print(f"[Images] Error: {e}")
-        return jsonify({
-            "images": [
-                "https://placehold.co/640x400/13131f/9333ea?text=Error",
-                "https://placehold.co/640x400/13131f/06b6d4?text=Error",
-                "https://placehold.co/640x400/13131f/ec4899?text=Error",
-            ]
-        }), 500
+        print(f'[GetImagesError: {str(e)}]')
+        traceback.print_exc()
+        return jsonify({'images': [
+            f'https://placehold.co/400x250/1a1a2e/8b5cf6?text={topic[:20].replace(" ","+")}+Diagram+1',
+            f'https://placehold.co/400x250/1a1a2e/06b6d4?text={topic[:20].replace(" ","+")}+Diagram+2',
+            f'https://placehold.co/400x250/1a1a2e/ec4899?text={topic[:20].replace(" ","+")}+Diagram+3'
+        ]})
 
-
-# ─── /save-queue  (Timer queue persistence) ──────────────────────────────────
-@app.route("/save-queue", methods=["POST"])
-def route_save_queue():
-    """
-    Save the timer question queue to server memory.
-    Called when user clicks 'Timer →' from Breakdown tab.
-
-    Body: { "questions": ["q1", "q2", ...] }
-    """
+@app.route('/save-queue', methods=['POST'])
+def save_queue_route():
     try:
-        body      = request.get_json(force=True) or {}
-        questions = body.get("questions", [])
-
-        if not isinstance(questions, list):
-            return jsonify({"error": "questions must be a list"}), 400
-
-        # Use IP as a simple session key (good enough for dev/demo)
-        key = request.remote_addr or "default"
-        _queue_store[key] = [
-            {"text": q, "done": False}
-            for q in questions
-            if isinstance(q, str) and q.strip()
-        ]
-
-        print(f"[Queue] Saved {len(_queue_store[key])} questions for {key}")
-        return jsonify({"saved": len(_queue_store[key])})
-
+        data = request.get_json()
+        questions = data.get('questions', [])
+        ip = request.remote_addr
+        _queue_store[ip] = [{'text': q, 'done': False} for q in questions]
+        return jsonify({'saved': len(questions)})
     except Exception as e:
-        print(f"[Queue] Save error: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f'[SaveQueueError: {str(e)}]')
+        return jsonify({'saved': 0})
 
-
-# ─── /get-queue  (Timer queue retrieval) ─────────────────────────────────────
-@app.route("/get-queue", methods=["GET"])
-def route_get_queue():
-    """
-    Retrieve the saved timer question queue.
-    Called when Timer tab loads.
-
-    Returns: { "questions": [{"text": str, "done": bool}, ...] }
-    """
+@app.route('/get-queue', methods=['GET'])
+def get_queue_route():
     try:
-        key = request.remote_addr or "default"
-        queue = _queue_store.get(key, [])
-        print(f"[Queue] Returning {len(queue)} questions for {key}")
-        return jsonify({"questions": queue})
-
+        ip = request.remote_addr
+        queue = _queue_store.get(ip, [])
+        return jsonify({'questions': queue})
     except Exception as e:
-        print(f"[Queue] Get error: {e}")
-        return jsonify({"questions": []}), 500
+        print(f'[GetQueueError: {str(e)}]')
+        return jsonify({'questions': []})
 
+@app.route('/clear-queue', methods=['POST'])
+def clear_queue_route():
+    try:
+        ip = request.remote_addr
+        if ip in _queue_store:
+            del _queue_store[ip]
+        return jsonify({'cleared': True})
+    except Exception as e:
+        print(f'[ClearQueueError: {str(e)}]')
+        return jsonify({'cleared': False})
 
-# ─── /clear-queue ────────────────────────────────────────────────────────────
-@app.route("/clear-queue", methods=["POST"])
-def route_clear_queue():
-    """Clear the queue when user resets timer."""
-    key = request.remote_addr or "default"
-    _queue_store.pop(key, None)
-    return jsonify({"cleared": True})
-
-
-# ─── Run ─────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    port  = int(os.getenv("PORT", 5000))
-    debug = os.getenv("DEBUG", "true").lower() == "true"
-    print(f"ExamCram AI backend running on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('DEBUG', 'true').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug)
