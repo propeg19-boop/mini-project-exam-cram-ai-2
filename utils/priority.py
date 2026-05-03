@@ -1,94 +1,69 @@
-"""
-priority.py — Question priority classifier
-Matches keywords to assign High / Medium / Low priority
-"""
-
 import re
 
-# Keyword maps — order matters, High checked first
-HIGH_KEYWORDS    = r'\b(define|list|state|name|what is|what are|identify|mention|give|write|label)\b'
-MEDIUM_KEYWORDS  = r'\b(explain|describe|write about|outline|summarise|summarize|illustrate|discuss|show|how does|how do)\b'
-LOW_KEYWORDS     = r'\b(analyze|analyse|compare|derive|evaluate|differentiate|contrast|justify|assess|examine|critically|elaborate)\b'
+HIGH_KEYWORDS = ['define', 'state', 'list', 'name', 'identify', 'what is', 'what are',
+                 'enumerate', 'mention', 'classify', 'distinguish']
+MED_KEYWORDS = ['explain', 'describe', 'discuss', 'outline', 'elaborate', 'illustrate',
+                'summarize', 'compare', 'contrast', 'differentiate']
+LOW_KEYWORDS = ['analyze', 'evaluate', 'critically', 'synthesize', 'justify',
+                'argue', 'assess', 'examine', 'investigate', 'propose']
 
-# Rough time estimates per priority (in minutes)
-TIME_MAP = {
-    'High':   '10–15 min',
-    'Medium': '20–30 min',
-    'Low':    '35–45 min',
-}
+def classify_question(text):
+    """Classify a single question by priority based on keywords."""
+    text_lower = text.lower()
+    high_score = sum(1 for k in HIGH_KEYWORDS if k in text_lower)
+    med_score = sum(1 for k in MED_KEYWORDS if k in text_lower)
+    low_score = sum(1 for k in LOW_KEYWORDS if k in text_lower)
 
-
-def classify_question(question: str) -> dict:
-    """
-    Given a question string, return its priority and estimated study time.
-    Returns: { "priority": str, "estimated_time": str }
-    """
-    text = question.lower().strip()
-
-    if re.search(HIGH_KEYWORDS, text):
-        priority = 'High'
-    elif re.search(LOW_KEYWORDS, text):
-        priority = 'Low'
-    elif re.search(MEDIUM_KEYWORDS, text):
-        priority = 'Medium'
+    if high_score > 0:
+        return 'High'
+    elif med_score > 0:
+        return 'Medium'
+    elif low_score > 0:
+        return 'Low'
     else:
-        # Default fallback: Medium for anything unrecognised
-        priority = 'Medium'
+        # Default: medium for longer questions, high for short
+        if len(text) < 60:
+            return 'High'
+        elif len(text) < 120:
+            return 'Medium'
+        return 'Low'
 
-    return {
-        'priority':       priority,
-        'estimated_time': TIME_MAP[priority],
-    }
+def estimate_time(text, priority):
+    """Estimate time needed to answer a question."""
+    base = {'High': 10, 'Medium': 20, 'Low': 35}
+    length_factor = len(text) // 100
+    return min(45, base.get(priority, 15) + length_factor * 5)
 
-
-def split_questions(raw: str) -> list[str]:
-    """
-    Split a multi-line question dump into individual question strings.
-    Strips leading numbering like "1.", "Q1.", "a)", etc.
-    """
-    lines = raw.strip().split('\n')
-    cleaned = []
-    for line in lines:
-        # Strip common prefixes: 1. / 1) / Q1. / a) / A.
-        line = re.sub(r'^[\s]*(?:Q\d+\.?|\d+[.):]|[A-Za-z][.):])\s*', '', line, flags=re.IGNORECASE)
-        line = line.strip()
-        if len(line) > 3:   # ignore empty / too-short lines
-            cleaned.append(line)
-    return cleaned
-
-
-def build_table(questions: list[str]) -> list[dict]:
-    """
-    Build the priority table sent to the frontend.
-    Returns list of { question, priority, estimated_time }
-    """
+def build_table(questions):
+    """Build a priority table from a list of question strings."""
     table = []
     for q in questions:
-        row = classify_question(q)
-        row['question'] = q
-        table.append(row)
+        if not q.strip():
+            continue
+        priority = classify_question(q)
+        time_min = estimate_time(q, priority)
+        table.append({
+            'question': q,
+            'priority': priority,
+            'estimated_time': f'{time_min} min'
+        })
     return table
 
+def build_day_plan(table, days):
+    """Distribute questions across days."""
+    if not table or days < 1:
+        return {}
 
-def build_day_plan(table: list[dict], days: int) -> dict:
-    """
-    Distribute questions across available days.
-    High-priority questions go to Day 1; the rest spread evenly.
-    Returns { "Day 1": [...], "Day 2": [...], ... }
-    """
-    # Sort: High → Medium → Low
-    order = {'High': 0, 'Medium': 1, 'Low': 2}
-    sorted_qs = sorted(table, key=lambda r: order[r['priority']])
-
-    # Chunk into days
-    total = len(sorted_qs)
-    per_day = max(1, -(-total // days))  # ceiling division
+    # Sort: High first, then Medium, then Low
+    sorted_qs = sorted(table, key=lambda x: {'High': 0, 'Medium': 1, 'Low': 2}.get(x['priority'], 1))
 
     day_plan = {}
-    for i in range(days):
-        chunk = sorted_qs[i * per_day:(i + 1) * per_day]
-        if not chunk:
-            break
-        day_plan[f'Day {i + 1}'] = [row['question'] for row in chunk]
+    per_day = max(1, len(sorted_qs) // days)
+
+    for d in range(days):
+        start = d * per_day
+        end = start + per_day if d < days - 1 else len(sorted_qs)
+        day_qs = sorted_qs[start:end]
+        day_plan[f'Day {d+1}'] = [q['question'] for q in day_qs]
 
     return day_plan
