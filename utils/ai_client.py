@@ -7,8 +7,8 @@ All calls go through call_ai() and call_ai_json().
 import json
 import re
 import time
-import google.generativeai as genai
 import os
+import requests
 
 # ─── Model Fallback Chain (in priority order) ──────────────
 MODELS = [
@@ -16,44 +16,60 @@ MODELS = [
     "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemma-3-27b-it",
+    "gemini-1.5-flash",
 ]
 
 # Timeout per attempt (seconds)
-REQUEST_TIMEOUT = 20
+REQUEST_TIMEOUT = 25
 
-# ─── Configure Gemini SDK ──────────────────────────────────
 _api_key = os.environ.get("GEMINI_API_KEY", "")
-if _api_key:
-    genai.configure(api_key=_api_key)
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
-# ─── Core Caller ──────────────────────────────────────────
+# ─── Core Caller (pure requests — no SDK dependency) ───────
 
 def call_ai(prompt: str, max_tokens: int = 1000, system: str = "") -> str:
     """
-    Attempt each model in MODELS order.
-    Returns the first successful text response.
+    Attempt each model in MODELS order via REST API.
+    No google SDK required — works on any host.
     Raises RuntimeError if all models fail.
     """
+    if not _api_key:
+        raise RuntimeError("GEMINI_API_KEY not set.")
+
     last_err = None
-    full_prompt = f"{system}\n\n{prompt}" if system else prompt
+    contents = []
+
+    if system:
+        contents.append({"role": "user", "parts": [{"text": system}]})
+        contents.append({"role": "model", "parts": [{"text": "Understood."}]})
+
+    contents.append({"role": "user", "parts": [{"text": prompt}]})
+
+    payload = {
+        "contents": contents,
+        "generationConfig": {
+            "maxOutputTokens": max_tokens,
+            "temperature": 0.4,
+        },
+    }
 
     for model_name in MODELS:
         try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=0.4,
-                ),
-                request_options={"timeout": REQUEST_TIMEOUT},
+            url = GEMINI_URL.format(model=model_name)
+            resp = requests.post(
+                url,
+                params={"key": _api_key},
+                json=payload,
+                timeout=REQUEST_TIMEOUT,
             )
-            return response.text.strip()
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            return text.strip()
         except Exception as e:
             last_err = e
-            # Small backoff before next attempt
             time.sleep(0.3)
             continue
 
