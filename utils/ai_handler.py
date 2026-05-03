@@ -1,228 +1,147 @@
-"""
-ai_handler.py — Gemini AI wrapper with automatic model fallback
-Model IDs verified against Google AI Studio rate limit page (May 2026).
-Never crashes; always returns valid JSON.
-"""
-
 import os
+import requests
 import json
 import re
-import requests
+import traceback
 
-# ─── Model fallback chain ────────────────────────────────────────────────────
-#
-# Ordered: highest RPM first → best availability → most capable last
-#
-# From your Google AI Studio rate limits:
-# ┌────────────────────────────┬───────────┬────────────┐
-# │ Model (UI Name)            │ RPM       │ TPM        │
-# ├────────────────────────────┼───────────┼────────────┤
-# │ Gemini 3.1 Flash Lite      │ 15 RPM    │ 250K       │
-# │ Gemini 2.5 Flash Lite      │ 10 RPM    │ 250K       │
-# │ Gemini 2.5 Flash           │  5 RPM    │ 250K       │
-# │ Gemini 3 Flash             │  5 RPM    │ 250K       │
-# │ Gemma 4 26B                │ 15 RPM    │ Unlimited  │
-# │ Gemma 4 31B                │ 15 RPM    │ Unlimited  │
-# │ Gemma 3 27B                │ 30 RPM    │ 15K        │
-# └────────────────────────────┴───────────┴────────────┘
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 MODEL_CHAIN = [
-    # Tier 1: Highest RPM, fastest response
-    "gemini-3.1-flash-lite",                   # 15 RPM | 250K TPM
-    "gemini-2.5-flash-lite-preview-06-17",     # 10 RPM | 250K TPM
-
-    # Tier 2: Smarter models, moderate RPM
-    "gemini-2.5-flash",                        # 5 RPM  | 250K TPM
-    "gemini-3.0-flash",                        # 5 RPM  | 250K TPM
-
-    # Tier 3: Gemma — great fallbacks, unlimited tokens
-    "gemma-4-27b-it",                          # 15 RPM | Unlimited (Gemma 4 26B)
-    "gemma-4-31b-it",                          # 15 RPM | Unlimited (Gemma 4 31B)
-    "gemma-3-27b-it",                          # 30 RPM | 15K
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash-lite-preview-06-17",
+    "gemini-2.5-flash",
+    "gemini-3.0-flash",
+    "gemini-2.5-pro",
+    "gemma-3-27b-it",
 ]
 
-GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+def call_ai(prompt, temperature=0.7, max_tokens=2048):
+    """Try each model in MODEL_CHAIN until one succeeds."""
+    if not GEMINI_API_KEY:
+        print('[AIError: No GEMINI_API_KEY set]')
+        return None
 
-
-def _call_gemini(model: str, prompt: str, api_key: str) -> str:
-    """
-    Raw call to a single Gemini/Gemma model.
-    Returns the text content of the first candidate.
-    Raises on non-200 or empty response.
-    """
-    url = f"{GEMINI_BASE}/{model}:generateContent?key={api_key}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 2048,
-        },
-    }
-    resp = requests.post(url, json=payload, timeout=30)
-    resp.raise_for_status()
-
-    data = resp.json()
-    candidates = data.get("candidates", [])
-    if not candidates:
-        raise ValueError("No candidates returned")
-
-    content = candidates[0].get("content", {})
-    parts = content.get("parts", [])
-    if not parts:
-        raise ValueError("Empty parts in response")
-
-    text = parts[0].get("text", "").strip()
-    if not text:
-        raise ValueError("Empty text in response")
-
-    return text
-
-
-def call_ai(prompt: str) -> str:
-    """
-    Try each model in MODEL_CHAIN until one succeeds.
-    Returns raw text from the model.
-    Raises RuntimeError only if ALL models fail (very unlikely with 7 models).
-    """
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY not set in .env")
-
-    last_error = None
     for model in MODEL_CHAIN:
         try:
-            print(f"[AI] Trying model: {model}")
-            result = _call_gemini(model, prompt, api_key)
-            print(f"[AI] SUCCESS with: {model}")
-            return result
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens
+                }
+            }
+            resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code != 200:
+                print(f'[AIWarn: {model} returned {resp.status_code}]')
+                continue
+
+            data = resp.json()
+            candidates = data.get('candidates', [])
+            if not candidates:
+                continue
+
+            text = candidates[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+            if not text:
+                continue
+
+            # Try to extract JSON
+            result = extract_json(text)
+            if result:
+                return result
+
+            # If no JSON but we got text, wrap it
+            return {"answer": text, "analogy": "", "understanding": "", "extra": ""}
+
         except Exception as e:
-            print(f"[AI] FAILED {model}: {e}")
-            last_error = e
+            print(f'[AIWarn: {model} failed: {str(e)}]')
             continue
 
-    raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
+    print('[AIError: All models in chain failed]')
+    return None
 
+def extract_json(text):
+    """Extract JSON from text, handling fences and raw blocks."""
+    # Strip markdown fences
+    cleaned = re.sub(r'```json\s*', '', text)
+    cleaned = re.sub(r'```\s*', '', cleaned)
+    cleaned = cleaned.strip()
 
-def extract_json(raw: str) -> dict:
-    """
-    Robustly pull JSON from a model response that may include markdown fences.
-    """
-    # Strip ```json ... ``` or ``` ... ``` wrappers
-    cleaned = re.sub(r"```(?:json)?\s*", "", raw).replace("```", "").strip()
-
-    # Try direct parse first
+    # Try direct parse
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # Find first outermost { ... } block
+    # Find first { } block
     match = re.search(r'\{.*\}', cleaned, re.DOTALL)
     if match:
         try:
-            return json.loads(match.group())
+            return json.loads(match.group(0))
         except json.JSONDecodeError:
             pass
 
-    # Last resort: wrap raw text so frontend never breaks
-    print(f"[AI] WARNING: Could not parse JSON, wrapping raw text as answer")
-    return {
-        "answer": cleaned,
-        "analogy": "",
-        "understanding": "",
-        "extra": "Note: AI response could not be fully structured."
-    }
+    return None
 
+def generate_plan_prompt(questions_text, days, level, tone):
+    return f"""You are an expert study planner. Create a day-wise study plan for these exam questions.
 
-# ─── Prompt builders ─────────────────────────────────────────────────────────
-
-def build_plan_prompt(questions: str, days: int, level: str, tone: str) -> str:
-    return f"""You are an expert study planner. A student needs help organizing exam prep.
-
-Student level: {level}
-Tone: {tone}
-Available days: {days}
 Questions:
-{questions}
+{questions_text}
 
-Return ONLY a valid JSON object. No markdown. No explanation. Just raw JSON.
+Parameters:
+- Days available: {days}
+- Student level: {level}
+- Preferred tone: {tone}
+
+Classify each question as High/Medium/Low priority based on:
+- High: foundational concepts, frequently tested, definitions
+- Medium: explanatory questions, moderate complexity
+- Low: advanced analysis, rarely tested, niche topics
+
+Estimate time needed per question (10-45 min).
+
+Return ONLY valid JSON in this exact structure:
 {{
   "table": [
-    {{"question": "...", "priority": "High|Medium|Low", "estimated_time": "..."}}
+    {{"question": "question text", "priority": "High|Medium|Low", "estimated_time": "15 min"}}
   ],
   "day_plan": {{
-    "Day 1": ["question text", ...],
-    "Day 2": ["question text", ...]
+    "Day 1": ["question text 1", "question text 2"],
+    "Day 2": ["question text 3"]
   }},
   "meta": {{
     "days": {days},
-    "total": <integer>
+    "total": number_of_questions
   }}
 }}
-
-Rules:
-- High priority: define, list, state, name, identify
-- Medium priority: explain, describe, discuss, outline
-- Low priority: analyze, compare, evaluate, contrast
-- Spread across {days} days with High questions first
-- estimated_time format: "10 min", "20 min", "35 min"
 """
 
-
-def build_answer_prompt(question: str, mode: str, level: str, tone: str) -> str:
-    if mode == "exam":
-        return f"""You are an expert exam coach.
+def generate_answer_prompt(question, mode, level, tone):
+    if mode == 'exam':
+        return f"""Write a complete, exam-ready answer for this question.
 
 Question: {question}
 Student level: {level}
-Tone: {tone}
 
-Return ONLY valid JSON. No markdown. No extra text:
-{{
-  "answer": "Complete structured exam answer with introduction, main body points, and conclusion."
-}}
-"""
-    elif mode == "quick":
-        return f"""You are a fast-revision tutor.
+Provide a well-structured answer that could be written in an exam:
+- Clear introduction with definition
+- 3-4 key points with examples
+- Concluding statement
+- Mention approximate marks and time allocation
 
-Question: {question}
-Student level: {level}
-Tone: {tone}
+Return ONLY valid JSON: {{"answer": "your complete answer here"}}"""
 
-Return ONLY valid JSON. No markdown. No extra text:
-{{
-  "analogy": "One punchy analogy to remember this",
-  "understanding": "3-5 bullet points of core concepts",
-  "answer": "Concise 2-3 sentence summary answer",
-  "extra": "One exam tip or common mistake to avoid"
-}}
-"""
-    else:  # focused
-        return f"""You are a deep-learning study coach.
+    return f"""Explain this concept deeply for a {level} level student.
 
 Question: {question}
-Student level: {level}
 Tone: {tone}
 
-Return ONLY valid JSON. No markdown. No extra text:
+Return ONLY valid JSON with these exact keys:
 {{
-  "analogy": "A real-world analogy that makes this concept click",
-  "understanding": "Thorough conceptual breakdown in plain language",
-  "answer": "Well-structured detailed answer with all key points explained",
-  "extra": "Memory technique, pro tip, or related concept for exam edge"
+  "analogy": "a relatable real-world analogy",
+  "understanding": "the core concept explained simply",
+  "answer": "a thorough academic explanation with structure",
+  "extra": "exam tips, common mistakes, or related concepts"
 }}
 """
-
-
-def generate_plan(questions: str, days: int, level: str, tone: str) -> dict:
-    """Full pipeline for /generate-plan"""
-    prompt = build_plan_prompt(questions, days, level, tone)
-    raw = call_ai(prompt)
-    return extract_json(raw)
-
-
-def generate_answer(question: str, mode: str, level: str, tone: str) -> dict:
-    """Full pipeline for /generate-answer"""
-    prompt = build_answer_prompt(question, mode, level, tone)
-    raw = call_ai(prompt)
-    return extract_json(raw)
