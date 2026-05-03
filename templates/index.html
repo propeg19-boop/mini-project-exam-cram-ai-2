@@ -1,860 +1,736 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ExamCram AI — Smart Study Planner</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/lucide@latest"></script>
-<style>
-:root {
-  --black:      #080810;
-  --surface:    rgba(14, 14, 26, 0.5);
-  --card:       rgba(19, 19, 31, 0.65);
-  --border:     rgba(255, 255, 255, 0.08);
-  --border-h:   rgba(255, 255, 255, 0.15);
-  --purple:     #9333ea;
-  --purple-dim: #6d28d9;
-  --cyan:       #06b6d4;
-  --cyan-dim:   #0891b2;
-  --pink:       #ec4899;
-  --text:       #f8fafc;
-  --muted:      #94a3b8;
-  --glow-p:     0 0 20px rgba(147,51,234,0.4);
-  --glow-c:     0 0 20px rgba(6,182,212,0.4);
-  --font-main:  'Inter', sans-serif;
-  --font-mono:  'JetBrains Mono', monospace;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
-body{
-  background: radial-gradient(circle at 50% 0%, #151025 0%, var(--black) 50%);
-  color:var(--text);font-family:var(--font-main);font-size:14px;line-height:1.6;
-  min-height:100vh;overflow-x:hidden;
-}
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px);
-}
-#app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px 80px;}
-.icon { width: 16px; height: 16px; stroke-width: 2; display: inline-flex; }
-header{
-  padding:44px 0 28px;display:flex;align-items:flex-end;
-  justify-content:space-between;border-bottom:1px solid var(--border);margin-bottom:32px;
-}
-.logo{font-family:var(--font-main);font-size:26px;font-weight:800;letter-spacing:-0.5px;}
-.logo .p{color:var(--purple);}.logo .c{color:var(--cyan);}
-.logo-sub{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;}
-.header-badges{display:flex;gap:8px;}
-.badge{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:4px;border:1px solid;}
-.bp{border-color:rgba(147,51,234,0.5);color:#d8b4fe;background:rgba(147,51,234,0.08);}
-.bc{border-color:rgba(6,182,212,0.5);color:#67e8f9;background:rgba(6,182,212,0.08);}
-.tabs{
-  display:flex;gap:4px;margin-bottom:28px;
-  background:var(--surface);padding:6px;border-radius:12px;border:1px solid var(--border);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-}
-.tab-btn{
-  flex:1;padding:10px 14px;background:transparent;border:none;border-radius:8px;
-  color:var(--muted);font-family:var(--font-main);font-size:13px;font-weight:500;
-  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.tab-btn:hover{color:var(--text);background:rgba(255,255,255,0.03);}
-.tab-btn.active{
-  background:linear-gradient(135deg,rgba(147,51,234,.15),rgba(6,182,212,.08));
-  color:var(--text);border:1px solid rgba(147,51,234,.35);box-shadow:var(--glow-p);
-}
-.panel{display:none;animation:fadeUp .3s ease;}
-.panel.active{display:block;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.card{
-  background:var(--card);backdrop-filter: blur(16px);-webkit-backdrop-filter: blur(16px);
-  border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-.card-title{
-  font-family:var(--font-main);font-size:12px;font-weight:700;text-transform:uppercase;
-  letter-spacing:1.5px;color:var(--muted);margin-bottom:20px;display:flex;align-items:center;gap:10px;
-}
-.card-title::before{
-  content:'';display:inline-block;width:4px;height:14px;border-radius:2px;
-  background:linear-gradient(180deg,var(--purple),var(--cyan));
-}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-label{font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);}
-input,textarea,select{
-  background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;
-  color:var(--text);font-family:var(--font-mono);font-size:13px;padding:12px 14px;
-  transition:all .2s;outline:none;width:100%;
-}
-input:focus,textarea:focus,select:focus{
-  border-color:var(--purple);box-shadow:0 0 0 3px rgba(147,51,234,.15);background:rgba(0,0,0,0.4);
-}
-textarea{resize:vertical;min-height:120px;}
-select option{background:#13131f;}
-.btn{
-  font-family:var(--font-main);font-size:13px;font-weight:600;
-  padding:10px 20px;border:none;border-radius:10px;
-  cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px;
-}
-.btn-primary{background:linear-gradient(135deg,var(--purple),var(--purple-dim));color:#fff;box-shadow:0 4px 14px rgba(147,51,234,.25);}
-.btn-primary:hover{box-shadow:0 6px 20px rgba(147,51,234,.4);transform:translateY(-1px);}
-.btn-cyan{background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.25);}
-.btn-cyan:hover{box-shadow:0 6px 20px rgba(6,182,212,.4);transform:translateY(-1px);}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
-.btn-ghost:hover{border-color:var(--border-h);color:var(--text);background:rgba(255,255,255,0.03);}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
-.action-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
-.mode-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
-.mode-btn{
-  padding:14px 10px;background:rgba(0,0,0,0.2);border:1px solid var(--border);
-  border-radius:12px;color:var(--muted);font-family:var(--font-main);font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .2s;text-align:center;line-height:1.5;display:flex;flex-direction:column;align-items:center;gap:4px;
-}
-.mode-btn span { font-weight:400; }
-.mode-btn:hover{border-color:var(--border-h);color:var(--text);}
-.mode-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:var(--glow-c);}
-.loader{display:none;align-items:center;gap:12px;color:var(--muted);font-size:13px;padding:16px 0;font-weight:500;}
-.loader.show{display:flex;}
-.dots{display:flex;gap:5px;}
-.dots span{width:8px;height:8px;border-radius:50%;background:var(--purple);animation:dot 1.4s ease-in-out infinite;}
-.dots span:nth-child(2){animation-delay:.2s;background:var(--cyan);}
-.dots span:nth-child(3){animation-delay:.4s;}
-@keyframes dot{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;backdrop-filter: blur(8px);}
-.stat-num{
-  font-family:var(--font-main);font-size:32px;font-weight:800;
-  background:linear-gradient(135deg,var(--purple),var(--cyan));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;
-}
-.stat-lbl{font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
-.breakdown-list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
-.breakdown-item{
-  display:flex;align-items:flex-start;gap:12px;background:rgba(0,0,0,0.2);border:1px solid var(--border);
-  border-radius:10px;padding:14px;transition:all .2s;
-}
-.breakdown-item:hover{border-color:rgba(6,182,212,.3);background:rgba(6,182,212,.03);}
-.bd-num{
-  width:28px;height:28px;border-radius:8px;flex-shrink:0;
-  background:rgba(147,51,234,.15);border:1px solid rgba(147,51,234,.3);
-  color:#d8b4fe;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;
-}
-.bd-text{flex:1;font-size:14px;color:var(--text);line-height:1.5;}
-.bd-tag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;flex-shrink:0;}
-.tag-h{background:rgba(236,72,153,.15);color:#f9a8d4;border:1px solid rgba(236,72,153,.3);}
-.tag-m{background:rgba(147,51,234,.15);color:#d8b4fe;border:1px solid rgba(147,51,234,.3);}
-.tag-l{background:rgba(6,182,212,.15);color:#67e8f9;border:1px solid rgba(6,182,212,.3);}
-.plan-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:16px;font-size:14px;}
-.plan-table th{
-  text-align:left;padding:12px 16px;font-size:11px;font-weight:600;
-  letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);
-}
-.plan-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
-.plan-table tr:last-child td{border-bottom:none;}
-.plan-table tr:hover td{background:rgba(255,255,255,0.02);}
-.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;}
-.day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px;}
-.day-card{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:12px;padding:16px;}
-.day-label{
-  font-family:var(--font-main);font-size:13px;font-weight:700;color:var(--cyan);
-  text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:6px;
-}
-.day-q{font-size:13px;color:var(--text);padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:8px;}
-.day-q:last-child{border-bottom:none;padding-bottom:0;}
-.day-q i{color:var(--purple);flex-shrink:0;margin-top:2px;width:14px;height:14px;}
-.ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
-.ans-block{
-  background:rgba(0,0,0,0.2);border:1px solid var(--border);
-  border-radius:12px;padding:20px;position:relative;transition:all .2s;
-}
-.ans-block:hover{border-color:rgba(147,51,234,.4);background:rgba(147,51,234,.02);}
-.ans-block.full{grid-column:1/-1;}
-.ans-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.ans-label i{width:14px;height:14px;}
-.ans-text{color:var(--text);line-height:1.8;font-size:14px;white-space:pre-wrap;}
-.copy-btn{
-  position:absolute;top:16px;right:16px;background:transparent;border:1px solid var(--border);
-  border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;
-  font-family:var(--font-main);transition:all .2s;display:flex;align-items:center;gap:6px;
-}
-.copy-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,0.05);}
-.copy-btn.copied{border-color:var(--purple);color:var(--purple);}
-.img-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px;}
-.img-thumb{
-  aspect-ratio:16/10;border-radius:10px;overflow:hidden;border:1px solid var(--border);
-  background:rgba(0,0,0,0.3);cursor:pointer;transition:all .3s;
-}
-.img-thumb:hover{border-color:var(--cyan);transform:scale(1.03);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
-.img-thumb img{width:100%;height:100%;object-fit:cover;}
-.timer-wrap{display:flex;flex-direction:column;align-items:center;padding:32px 0;}
-.ring-wrap{position:relative;width:240px;height:240px;margin-bottom:32px;}
-#tsvg{transform:rotate(-90deg);width:100%;height:100%;}
-#t-track{fill:none;stroke:rgba(255,255,255,0.05);stroke-width:6;}
-#t-bar{fill:none;stroke-width:6;stroke-linecap:round;stroke:url(#tg);transition:stroke-dashoffset 1s linear;}
-.t-display{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.t-time{font-family:var(--font-mono);font-size:48px;font-weight:500;letter-spacing:-2px;color:var(--text);line-height:1;}
-.t-sub{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:8px;}
-.t-controls{display:flex;gap:12px;margin-bottom:28px;}
-.t-queue{width:100%;max-width:500px;background:rgba(0,0,0,0.2);padding:20px;border-radius:12px;border:1px solid var(--border);}
-.t-q-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.q-item{
-  display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:8px;
-  border:1px solid var(--border);margin-bottom:8px;font-size:13px;transition:all .2s;background:rgba(255,255,255,0.02);
-}
-.q-item.active{border-color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:var(--glow-c);}
-.q-item.done{opacity:.4;text-decoration:line-through;background:transparent;border-color:transparent;}
-.q-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:6px;}
-.q-dot.pending{background:var(--muted);}
-.q-dot.active{background:var(--cyan);box-shadow:0 0 10px var(--cyan);}
-.q-dot.done{background:var(--purple);}
-#toast{
-  position:fixed;bottom:32px;right:32px;background:var(--card);
-  backdrop-filter: blur(16px);-webkit-backdrop-filter: blur(16px);
-  border:1px solid var(--border);border-radius:12px;padding:16px 24px;
-  font-size:14px;font-weight:500;max-width:320px;z-index:999;display:none;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);animation:slideIn .3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-#toast.show{display:flex;align-items:center;gap:10px;}
-#toast.err{border-color:rgba(236,72,153,.5);}
-#toast.ok{border-color:rgba(6,182,212,.5);}
-@keyframes slideIn{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-.flex-between{display:flex;align-items:center;justify-content:space-between;}
-.hidden{display:none!important;}
-.empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:12px;}
-.empty i{width:32px;height:32px;opacity:0.5;}
-@media(max-width:768px){
-  .ans-grid,.form-row{grid-template-columns:1fr;}
-  .mode-group{grid-template-columns:1fr;}
-  .tabs{flex-wrap:wrap;}
-  .tab-btn{font-size:12px;padding:10px;}
-  header{flex-direction:column;align-items:flex-start;gap:16px;}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamCram AI | Locked In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Late-Night Neon Grind Palette */
+            --void: #050505;
+            --surface: #111114;
+            --surface-hover: #1c1c21;
+            --border-faint: rgba(255, 255, 255, 0.08);
+            
+            --neon-purple: #8B5CF6;
+            --neon-pink: #EC4899;
+            --neon-orange: #F97316;
+            --neon-blue: #06b6d4;
+            
+            --text-main: #FFFFFF;
+            --text-muted: #9CA3AF;
+            
+            --glow-orange: 0 0 15px rgba(249, 115, 22, 0.4);
+            --glow-pink: 0 0 15px rgba(236, 72, 153, 0.4);
+            --glow-purple: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            
+            /* THE WALLPAPER SETUP */
+            background-color: var(--void);
+            background-image: 
+                linear-gradient(to bottom, rgba(5, 5, 5, 0.7), rgba(5, 5, 5, 0.95)),
+                url("{{ url_for('static', filename='bg-image.png') }}"); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Smoked Acrylic Cards */
+        .card {
+            background: rgba(17, 17, 20, 0.85); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-faint);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        /* Forms & Inputs */
+        .select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        select, textarea, input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-faint);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            appearance: none;
+            transition: all 0.2s ease;
+        }
+        select:focus, textarea:focus {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+        .select-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-muted);
+        }
+        option { background: var(--surface); color: var(--text-main); }
+
+        .btn-neon {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--neon-purple);
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--glow-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .btn-neon:hover {
+            background: var(--neon-purple);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .btn-orange { border-color: var(--neon-orange); box-shadow: var(--glow-orange); }
+        .btn-orange:hover { background: var(--neon-orange); box-shadow: 0 0 25px rgba(249, 115, 22, 0.6); }
+
+        /* --- PHASES --- */
+        .phase {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            overflow-y: auto;
+        }
+        .phase.active { opacity: 1; pointer-events: all; transform: scale(1); }
+
+        /* Vibe Check (Stage -1) */
+        #phase-vibe { justify-content: center; align-items: center; }
+        .vibe-box { max-width: 400px; width: 100%; text-align: center; }
+
+        /* Input (Stage 0) */
+        #phase-1 { justify-content: center; align-items: center; padding: 24px; }
+        .input-container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 24px; }
+        
+        .upload-area {
+            border: 1px dashed var(--border-faint);
+            background: rgba(255, 255, 255, 0.01);
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .upload-area:hover { border-color: var(--neon-pink); background: rgba(236, 72, 153, 0.05); }
+
+        /* Dashboard (Stage 3 & 4) */
+        #phase-3 { flex-direction: row; }
+        
+        .sidebar {
+            width: 280px;
+            border-right: 1px solid var(--border-faint);
+            background: rgba(5, 5, 5, 0.80); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            z-index: 10;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px;
+            color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-weight: 500;
+        }
+        .nav-item.active { background: var(--neon-purple); color: white; box-shadow: var(--glow-purple); }
+        .nav-item:hover:not(.active) { background: var(--surface-hover); color: var(--text-main); }
+
+        .main-dash {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            overflow-y: auto;
+        }
+
+        /* Top Stats Row */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .stat-card { display: flex; align-items: center; gap: 20px; }
+        .progress-circle {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: conic-gradient(var(--neon-purple) var(--pct), var(--surface-hover) 0);
+            display: flex; align-items: center; justify-content: center; position: relative;
+            box-shadow: var(--glow-purple);
+        }
+        .progress-inner { width: 64px; height: 64px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; }
+        
+        .rank-badge { width: 48px; height: 48px; background: rgba(139, 92, 246, 0.1); border: 1px solid var(--neon-purple); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--neon-purple); box-shadow: var(--glow-purple); }
+
+        /* Priority Matrix */
+        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .matrix-col { display: flex; flex-direction: column; gap: 12px; }
+        .matrix-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        
+        .topic-card {
+            background: rgba(28, 28, 33, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-faint);
+            padding: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .topic-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); background: rgba(35, 35, 40, 0.9); }
+        .topic-card.critical { border-left: 3px solid var(--neon-orange); }
+        .topic-card.important { border-left: 3px solid var(--neon-pink); }
+        .topic-card.skip { border-left: 3px solid var(--text-muted); opacity: 0.7; }
+        .topic-card.done { opacity: 0.4; text-decoration: line-through; border-left: 3px solid var(--neon-blue); }
+
+        /* Next Action Push */
+        .next-action-banner {
+            background: linear-gradient(90deg, rgba(249, 115, 22, 0.1), transparent);
+            border: 1px solid var(--neon-orange);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--glow-orange);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Slide-in Answer Engine */
+        .slide-panel {
+            position: fixed; top: 0; right: 0; bottom: 0; width: 500px;
+            background: rgba(17, 17, 20, 0.90); 
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-left: 1px solid var(--border-faint);
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 50; display: flex; flex-direction: column; box-shadow: -20px 0 50px rgba(0,0,0,0.8);
+        }
+        .slide-panel.active { transform: translateX(0); }
+        .panel-header { padding: 24px; border-bottom: 1px solid var(--border-faint); display: flex; justify-content: space-between; }
+        .panel-content { padding: 24px; flex: 1; overflow-y: auto; }
+        
+        .mode-tabs { display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 8px; margin-bottom: 24px; }
+        .mode-tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; color: var(--text-muted); }
+        .mode-tab.active { background: var(--surface-hover); color: var(--text-main); border: 1px solid var(--border-faint); }
+
+        /* Toasts */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
+        .toast { background: rgba(17, 17, 20, 0.9); backdrop-filter: blur(8px); border: 1px solid var(--border-faint); padding: 16px 24px; border-radius: 8px; display: flex; align-items: center; gap: 12px; transform: translateX(120%); transition: transform 0.3s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .toast.show { transform: translateX(0); }
+        .toast.orange { border-left: 4px solid var(--neon-orange); }
+        .toast.pink { border-left: 4px solid var(--neon-pink); }
+        .toast.purple { border-left: 4px solid var(--neon-purple); }
+
+    </style>
 </head>
 <body>
-<div id="app">
 
-<header>
-  <div>
-    <div class="logo">Exam<span class="p">Cram</span><span class="c"> AI</span></div>
-    <div class="logo-sub">Smart Study Planner &amp; Answer Generator</div>
-  </div>
-  <div class="header-badges">
-    <span class="badge bp">Gemini Model</span>
-    <span class="badge bc">v2.0</span>
-  </div>
-</header>
+    <!-- STAGE -1: VIBE CHECK (Tone Gatekeeper) -->
+    <div id="phase-vibe" class="phase active">
+        <div class="vibe-box card">
+            <h1 style="margin-bottom: 8px; font-size: 2rem;">ExamCram AI</h1>
+            <p style="color: var(--text-muted); margin-bottom: 32px;" id="copy-vibe-sub">Set the system parameters.</p>
+            
+            <div style="text-align: left; margin-bottom: 24px;">
+                <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">System Tone</label>
+                <div class="select-wrapper">
+                    <select id="tone-select">
+                        <option value="locked-in">Locked In (GenZ / Raw)</option>
+                        <option value="academic">Academic Weapon (Strict)</option>
+                        <option value="casual">Casual (Chill & Normal)</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="select-icon" size="18"></i>
+                </div>
+            </div>
 
-<nav class="tabs">
-  <button class="tab-btn active" data-tab="breakdown" onclick="switchTab('breakdown')"><i data-lucide="file-scan"></i> Breakdown</button>
-  <button class="tab-btn"        data-tab="planner"   onclick="switchTab('planner')"><i data-lucide="calendar-days"></i> Study Plan</button>
-  <button class="tab-btn"        data-tab="answer"    onclick="switchTab('answer')"><i data-lucide="brain-circuit"></i> Answers</button>
-  <button class="tab-btn"        data-tab="timer"     onclick="switchTab('timer')"><i data-lucide="timer"></i> Timer</button>
-</nav>
-
-<!-- TAB: BREAKDOWN -->
-<div class="panel active" id="tab-breakdown">
-  <div class="card">
-    <div class="card-title">Question Breakdown</div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label>Paste full question paper</label>
-      <textarea id="bd-input" placeholder="Paste your entire question paper here. Separate questions with new lines, numbers, or letters. ExamCram AI will detect and classify them automatically.&#10;&#10;Example:&#10;1. Define photosynthesis&#10;2. Explain Newton's second law&#10;3. Analyze the causes of World War I" style="min-height:160px"></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Your Level</label>
-        <select id="bd-level">
-          <option value="beginner">Beginner</option>
-          <option value="intermediate" selected>Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Tone</label>
-        <select id="bd-tone">
-          <option value="casual" selected>Casual</option>
-          <option value="formal">Formal</option>
-          <option value="academic">Academic</option>
-        </select>
-      </div>
-    </div>
-    <div class="action-row">
-      <button class="btn btn-primary" onclick="runBreakdown()"><i data-lucide="scan-line" class="icon"></i> Detect &amp; Classify</button>
-      <button class="btn btn-ghost"   onclick="clearBreakdown()"><i data-lucide="trash-2" class="icon"></i> Clear</button>
-    </div>
-    <div class="loader" id="bd-loader"><div class="dots"><span></span><span></span><span></span></div><span>Analysing paper syntax...</span></div>
-  </div>
-  <div id="bd-results" class="hidden">
-    <div class="stats-row" id="bd-stats"></div>
-    <div class="card">
-      <div class="flex-between" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:0">Detected Questions</div>
-        <div style="display:flex;gap:12px">
-          <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px" onclick="sendToPlanner()">Plan <i data-lucide="arrow-right" class="icon"></i></button>
-          <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px" onclick="sendToTimer()">Timer <i data-lucide="arrow-right" class="icon"></i></button>
+            <button class="btn-neon" onclick="lockInTone()">Boot System <i data-lucide="power" size="18"></i></button>
         </div>
-      </div>
-      <div class="breakdown-list" id="bd-list"></div>
     </div>
-  </div>
-</div>
 
-<!-- TAB: PLANNER -->
-<div class="panel" id="tab-planner">
-  <div class="card">
-    <div class="card-title">Study Plan Generator</div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label>Questions (one per line)</label>
-      <textarea id="pl-questions" placeholder="Define photosynthesis&#10;Explain Newton's second law" style="min-height:160px"></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Days Available</label>
-        <input type="number" id="pl-days" value="5" min="1" max="30"/>
-      </div>
-      <div class="form-group">
-        <label>Your Level</label>
-        <select id="pl-level">
-          <option value="beginner">Beginner</option>
-          <option value="intermediate" selected>Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Tone</label>
-        <select id="pl-tone">
-          <option value="casual" selected>Casual</option>
-          <option value="formal">Formal</option>
-          <option value="academic">Academic</option>
-        </select>
-      </div>
-    </div>
-    <div class="action-row">
-      <button class="btn btn-primary" onclick="generatePlan()"><i data-lucide="layout-list" class="icon"></i> Generate Plan</button>
-      <button class="btn btn-ghost"   onclick="clearPlan()"><i data-lucide="trash-2" class="icon"></i> Clear</button>
-    </div>
-    <div class="loader" id="pl-loader"><div class="dots"><span></span><span></span><span></span></div><span>Building your priority matrix...</span></div>
-  </div>
-  <div id="pl-results" class="hidden">
-    <div class="stats-row" id="pl-stats"></div>
-    <div class="card">
-      <div class="card-title">Priority Table</div>
-      <div style="overflow-x:auto;">
-        <table class="plan-table">
-          <thead><tr><th>#</th><th>Question</th><th>Priority</th><th>Est. Time</th><th>Action</th></tr></thead>
-          <tbody id="pl-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Day-by-Day Plan</div>
-      <div class="day-grid" id="pl-days-grid"></div>
-    </div>
-  </div>
-</div>
+    <!-- STAGE 0: ZERO FRICTION INPUT -->
+    <div id="phase-1" class="phase">
+        <div class="input-container">
+            <div style="text-align: center;">
+                <h1 id="copy-stage0-title" style="font-size: 2.5rem; margin-bottom: 8px; text-shadow: var(--glow-purple);">Drop the payload.</h1>
+                <p id="copy-stage0-sub" style="color: var(--text-muted);">Syllabus, question bank, or messy notes. We parse it all.</p>
+            </div>
 
-<!-- TAB: ANSWERS -->
-<div class="panel" id="tab-answer">
-  <div class="card">
-    <div class="card-title">Answer Generation Mode</div>
-    <div class="mode-group">
-      <button class="mode-btn active" data-mode="focused" onclick="setMode('focused')">
-        <i data-lucide="target"></i> Focused
-        <span style="font-size:11px;opacity:.7">Deep explanation</span>
-      </button>
-      <button class="mode-btn" data-mode="quick" onclick="setMode('quick')">
-        <i data-lucide="zap"></i> Quick
-        <span style="font-size:11px;opacity:.7">Bullet revision</span>
-      </button>
-      <button class="mode-btn" data-mode="exam" onclick="setMode('exam')">
-        <i data-lucide="file-pen-line"></i> Exam
-        <span style="font-size:11px;opacity:.7">Write-ready exact</span>
-      </button>
-    </div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label>Question</label>
-      <textarea id="ans-q" placeholder="Type or paste a specific exam question here..." style="min-height:100px"></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Your Level</label>
-        <select id="ans-level">
-          <option value="beginner">Beginner</option>
-          <option value="intermediate" selected>Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Tone</label>
-        <select id="ans-tone">
-          <option value="casual" selected>Casual</option>
-          <option value="formal">Formal</option>
-          <option value="academic">Academic</option>
-        </select>
-      </div>
-    </div>
-    <div class="action-row">
-      <button class="btn btn-primary" onclick="generateAnswer()"><i data-lucide="sparkles" class="icon"></i> Generate Answer</button>
-      <button class="btn btn-cyan"    onclick="fetchImages()"><i data-lucide="image" class="icon"></i> Get Diagrams</button>
-      <button class="btn btn-ghost"   onclick="clearAnswer()"><i data-lucide="trash-2" class="icon"></i> Clear</button>
-    </div>
-    <div class="loader" id="ans-loader"><div class="dots"><span></span><span></span><span></span></div><span id="ans-loader-msg">Processing query...</span></div>
-  </div>
-  <div id="ans-out" class="hidden">
-    <div class="ans-grid" id="ans-grid"></div>
-  </div>
-  <div id="img-out" class="hidden">
-    <div class="card" style="margin-top:20px">
-      <div class="flex-between" style="margin-bottom:12px">
-        <div class="card-title" style="margin-bottom:0">Relevant Diagrams</div>
-        <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px" onclick="fetchImages()"><i data-lucide="refresh-cw" class="icon"></i> Refresh</button>
-      </div>
-      <div class="img-row" id="img-row"></div>
-    </div>
-  </div>
-</div>
+            <div class="card" style="display: flex; flex-direction: column; gap: 24px;">
+                <div>
+                    <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;" id="copy-level">Target Level</label>
+                    <div class="select-wrapper">
+                        <select id="level-select">
+                            <option value="survival">Survival Mode (Just Pass)</option>
+                            <option value="standard" selected>Standard (Good Grades)</option>
+                            <option value="topper">Topper Mode (100% Coverage)</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-icon" size="18"></i>
+                    </div>
+                </div>
 
-<!-- TAB: TIMER -->
-<div class="panel" id="tab-timer">
-  <div class="card">
-    <div class="card-title">Revision Timer</div>
-    <div class="timer-wrap">
-      <div class="ring-wrap">
-        <svg id="tsvg" viewBox="0 0 200 200">
-          <defs>
-            <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stop-color="#9333ea"/>
-              <stop offset="100%" stop-color="#06b6d4"/>
-            </linearGradient>
-          </defs>
-          <circle id="t-track" cx="100" cy="100" r="88"/>
-          <circle id="t-bar"   cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="0"/>
-        </svg>
-        <div class="t-display">
-          <div class="t-time" id="t-time">25:00</div>
-          <div class="t-sub"  id="t-sub">Ready</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <textarea id="raw-input" rows="8" placeholder="Paste raw text here..."></textarea>
+                    
+                    <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-in').click()">
+                        <i data-lucide="file-up" size="32" style="color: var(--text-muted); margin-bottom: 12px;"></i>
+                        <div id="copy-upload">Drag & drop syllabus PDF</div>
+                        <input type="file" id="file-in" hidden>
+                    </div>
+                </div>
+
+                <button class="btn-neon" onclick="processInput()" id="btn-process">
+                    Run Strategy Engine <i data-lucide="cpu" size="18"></i>
+                </button>
+            </div>
         </div>
-      </div>
-      <div class="t-controls">
-        <button class="btn btn-primary" id="btn-start" onclick="tStart()"><i data-lucide="play" class="icon"></i> Start</button>
-        <button class="btn btn-ghost"   id="btn-pause" onclick="tPause()" disabled><i data-lucide="pause" class="icon"></i> Pause</button>
-        <button class="btn btn-ghost"   onclick="tReset()"><i data-lucide="rotate-ccw" class="icon"></i> Reset</button>
-      </div>
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:32px">
-        <label style="font-size:11px;color:var(--muted)">Session (mins):</label>
-        <input type="number" id="t-mins" value="25" min="1" max="90" style="width:80px;text-align:center;padding:10px"/>
-        <button class="btn btn-ghost" style="padding:10px 16px;font-size:12px" onclick="tSetCustom()">Set</button>
-      </div>
-      <div class="t-queue">
-        <div class="t-q-title"><i data-lucide="list-todo"></i> Active Question Queue</div>
-        <div id="t-queue-list">
-          <div class="empty"><i data-lucide="inbox"></i>No questions queued.<br>Use "Timer →" from Breakdown tab.</div>
-        </div>
-      </div>
     </div>
-  </div>
-</div>
 
-</div>
-<div id="toast"></div>
+    <!-- STAGE 2: PROCESSING LAYER -->
+    <div id="phase-2" class="phase" style="justify-content: center; align-items: center;">
+        <div style="text-align: center;">
+            <i data-lucide="loader-2" class="spin" size="48" style="color: var(--neon-orange); margin-bottom: 24px; animation: spin 1s linear infinite;"></i>
+            <h2 id="proc-text" style="color: var(--neon-orange); text-shadow: var(--glow-orange);">Parsing Input...</h2>
+            <p style="color: var(--text-muted); font-family: 'JetBrains Mono'; margin-top: 12px; font-size: 0.85rem;" id="proc-log">[SYS] Extracting text</p>
+        </div>
+    </div>
 
-<script>
-/* ══ ICONS ══ */
-lucide.createIcons();
-function refreshIcons() { if(window.lucide) lucide.createIcons(); }
+    <!-- STAGE 3 & 4: CORE DASHBOARD (EXECUTION LOOP) -->
+    <div id="phase-3" class="phase">
+        <div class="sidebar">
+            <div style="font-weight: 700; font-size: 1.2rem; margin-bottom: 40px; color: var(--neon-purple); text-shadow: var(--glow-purple);">ExamCram AI</div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="nav-item active"><i data-lucide="layout-dashboard" size="18"></i> <span id="copy-nav-dash">War Room</span></div>
+                <div class="nav-item"><i data-lucide="calendar" size="18"></i> <span>Study Plan</span></div>
+                <div class="nav-item"><i data-lucide="sparkles" size="18"></i> <span>Ask Anything</span></div>
+                <div class="nav-item"><i data-lucide="timer" size="18"></i> <span>Focus Timer</span></div>
+            </div>
 
-/* ══ STATE ══ */
-const BASE = '';
-let mode     = 'focused';
-let detected = [];
-let tInterval = null, tSec = 1500, tTotal = 1500, tRunning = false;
-let tQueue = [], tIdx = 0;
+            <div class="card" style="margin-top: auto; padding: 16px; background: rgba(0,0,0,0.6);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Detected Subject</div>
+                <div style="font-weight: 600; font-family: 'JetBrains Mono';" id="ui-subject">Operating Systems</div>
+            </div>
+        </div>
 
-/* ══════════════════════════════════════
-   TABS — PATCHED: loads queue from backend when Timer tab opens
-══════════════════════════════════════ */
-function switchTab(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+        <div class="main-dash">
+            <!-- Top Stats -->
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <div class="progress-circle" id="ui-ring" style="--pct: 0%;">
+                        <div class="progress-inner mono" id="ui-score">0%</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">Readiness Score</div>
+                        <div style="font-weight: 600;" id="copy-score-status">Calculating...</div>
+                    </div>
+                </div>
 
-  // Auto-load queue from backend if Timer tab opens and local queue is empty
-  if (name === 'timer' && tQueue.length === 0) {
-    loadQueueFromBackend();
-  }
-}
+                <div class="card stat-card">
+                    <div class="rank-badge"><i data-lucide="award" size="24"></i></div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">Current Rank</div>
+                        <div style="font-weight: 600; font-size: 1.1rem; color: var(--neon-purple);" id="ui-rank">Unprepared</div>
+                    </div>
+                </div>
 
-/* ══ TOAST ══ */
-function toast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
-  const icon = type === 'err' ? '<i data-lucide="alert-circle"></i>' : '<i data-lucide="check-circle-2"></i>';
-  t.innerHTML = `${icon} ${msg}`;
-  t.className = `show ${type}`;
-  refreshIcons();
-  setTimeout(() => t.className = '', 3500);
-}
+                <div class="card stat-card" style="border-color: rgba(249, 115, 22, 0.3);">
+                    <div class="rank-badge" style="background: rgba(249, 115, 22, 0.1); border-color: var(--neon-orange); color: var(--neon-orange); box-shadow: var(--glow-orange);"><i data-lucide="flame" size="24"></i></div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">Points To Next Rank</div>
+                        <div class="mono" style="font-weight: 600; font-size: 1.1rem;" id="ui-points">20 XP</div>
+                    </div>
+                </div>
+            </div>
 
-/* ══ MODE ══ */
-function setMode(m) {
-  mode = m;
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-mode="${m}"]`).classList.add('active');
-}
+            <!-- Next Best Action -->
+            <div class="next-action-banner" id="next-action-banner">
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--neon-orange); margin-bottom: 4px; font-weight: 600; text-transform: uppercase;">Next Best Action</div>
+                    <div style="font-size: 1.2rem; font-weight: 600;" id="ui-next-topic">Process Scheduling Algorithms</div>
+                </div>
+                <button class="btn-neon btn-orange" style="width: auto; padding: 12px 24px;" onclick="openTopic('Process Scheduling Algorithms', 'critical')">Execute <i data-lucide="play" size="18"></i></button>
+            </div>
 
-/* ══ UTILS ══ */
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function escA(s) { return String(s).replace(/'/g,"\\'").replace(/\n/g,' '); }
-function showL(id) { document.getElementById(id).classList.add('show'); }
-function hideL(id) { document.getElementById(id).classList.remove('show'); }
+            <!-- Priority Matrix -->
+            <div>
+                <h3 style="margin-bottom: 20px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="layers" size="20"></i> Priority Matrix
+                </h3>
+                <div class="matrix-grid">
+                    <!-- Critical -->
+                    <div class="matrix-col" id="col-critical">
+                        <div class="matrix-header"><div style="width:8px;height:8px;border-radius:50%;background:var(--neon-orange);box-shadow:var(--glow-orange);"></div> Critical (+5 XP)</div>
+                        <!-- Populated by JS -->
+                    </div>
+                    <!-- Important -->
+                    <div class="matrix-col" id="col-important">
+                        <div class="matrix-header"><div style="width:8px;height:8px;border-radius:50%;background:var(--neon-pink);box-shadow:var(--glow-pink);"></div> Important (+3 XP)</div>
+                        <!-- Populated by JS -->
+                    </div>
+                    <!-- Skip -->
+                    <div class="matrix-col" id="col-skip">
+                        <div class="matrix-header"><div style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);"></div> Skip / Skim (+1 XP)</div>
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-function guessPri(q) {
-  const t = q.toLowerCase();
-  if (/\b(define|list|state|name|what is|what are|identify)\b/.test(t)) return 'High';
-  if (/\b(explain|describe|write|outline|summarise|summarize|illustrate|discuss)\b/.test(t)) return 'Medium';
-  if (/\b(analyze|analyse|compare|derive|evaluate|differentiate|contrast|justify|assess)\b/.test(t)) return 'Low';
-  return 'Medium';
-}
-function pillClass(p) { return p === 'High' ? 'tag-h' : p === 'Medium' ? 'tag-m' : 'tag-l'; }
-function tagClass(p)  { return p === 'High' ? 'tag-h' : p === 'Medium' ? 'tag-m' : 'tag-l'; }
+    <!-- ANSWER ENGINE PANEL -->
+    <div class="slide-panel" id="answer-panel">
+        <div class="panel-header">
+            <div>
+                <div style="font-size: 0.75rem; color: var(--neon-orange); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;" id="panel-priority-label">CRITICAL TOPIC</div>
+                <h3 id="panel-title" style="font-size: 1.2rem;">Topic Title</h3>
+            </div>
+            <i data-lucide="x" size="24" style="cursor:pointer; color: var(--text-muted);" onclick="closePanel()"></i>
+        </div>
+        
+        <div class="panel-content" style="display: flex; flex-direction: column;">
+            <div class="mode-tabs">
+                <div class="mode-tab active">Focused</div>
+                <div class="mode-tab">Revision</div>
+                <div class="mode-tab">Exam Format</div>
+            </div>
 
-function copyText(el, btn) {
-  navigator.clipboard.writeText(el.textContent).then(() => {
-    btn.innerHTML = '<i data-lucide="check"></i> Copied'; btn.classList.add('copied');
-    refreshIcons();
-    setTimeout(() => { btn.innerHTML = '<i data-lucide="copy"></i> Copy'; btn.classList.remove('copied'); refreshIcons(); }, 2000);
-  });
-}
+            <div class="card" style="flex: 1; margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6; color: rgba(255,255,255,0.9);" id="panel-answer-content">
+                Loading AI Strategy...
+            </div>
 
-/* ══ BREAKDOWN ══ */
-function runBreakdown() {
-  const raw = document.getElementById('bd-input').value.trim();
-  if (!raw) { toast('Paste your question paper first', 'err'); return; }
-  const lines = raw.split('\n')
-    .map(l => l.replace(/^[\s]*\d+[.)]\s*/,'')
-               .replace(/^[\s]*[A-Za-z][.)]\s*/,'')
-               .replace(/^Q\d+\.?\s*/i,'').trim())
-    .filter(l => l.length > 3);
-  if (!lines.length) { toast('No valid questions detected', 'err'); return; }
-  detected = lines;
-  renderBreakdown(lines);
-}
+            <div style="display: flex; gap: 12px; margin-top: auto;">
+                <button class="btn-neon" style="flex: 1; border-color: var(--border-faint); box-shadow: none; color: var(--text-muted);" onclick="alert('Diagram engine pinged')">
+                    <i data-lucide="image" size="18"></i> Get Diagrams
+                </button>
+                <button class="btn-neon" style="flex: 2; background: var(--neon-purple);" onclick="markComplete()" id="btn-complete">
+                    Mark Complete <i data-lucide="check-circle" size="18"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-function renderBreakdown(qs) {
-  const list  = document.getElementById('bd-list');
-  const stats = document.getElementById('bd-stats');
-  let h = 0, m = 0, l = 0;
-  list.innerHTML = '';
-  qs.forEach((q, i) => {
-    const p = guessPri(q);
-    if (p==='High') h++; else if (p==='Medium') m++; else l++;
-    list.innerHTML += `
-      <div class="breakdown-item">
-        <div class="bd-num">${i+1}</div>
-        <div class="bd-text">${esc(q)}</div>
-        <div class="bd-tag ${tagClass(p)}">${p}</div>
-      </div>`;
-  });
-  stats.innerHTML = `
-    <div class="stat-card"><div class="stat-num">${qs.length}</div><div class="stat-lbl">Total Questions</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#f9a8d4;-webkit-text-fill-color:#f9a8d4">${h}</div><div class="stat-lbl">High Priority</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#67e8f9;-webkit-text-fill-color:#67e8f9">${l}</div><div class="stat-lbl">Complex</div></div>`;
-  document.getElementById('bd-results').classList.remove('hidden');
-  toast(`${qs.length} questions analysed`);
-}
+    <!-- TOASTS -->
+    <div class="toast-container" id="toast-container"></div>
 
-function clearBreakdown() {
-  document.getElementById('bd-input').value = '';
-  document.getElementById('bd-results').classList.add('hidden');
-  detected = [];
-}
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
 
-function sendToPlanner() {
-  if (!detected.length) return;
-  document.getElementById('pl-questions').value = detected.join('\n');
-  switchTab('planner');
-  toast('Data synced to Study Plan');
-}
+    <script>
+        lucide.createIcons();
 
-/* ══════════════════════════════════════
-   sendToTimer — PATCHED: also saves queue to backend for persistence
-══════════════════════════════════════ */
-async function sendToTimer() {
-  if (!detected.length) return;
+        // --- STATE MANAGEMENT (STAGE 3) ---
+        let session = {
+            tone: 'locked-in',
+            score: 0,
+            xp: 0,
+            rank: 'Unprepared',
+            topics: {
+                critical: [
+                    { id: 'c1', title: 'Process Scheduling Algorithms', done: false, xp: 5 },
+                    { id: 'c2', title: 'Deadlock Prevention & Avoidance', done: false, xp: 5 },
+                    { id: 'c3', title: 'Virtual Memory & Paging', done: false, xp: 5 }
+                ],
+                important: [
+                    { id: 'i1', title: 'Multithreading Models', done: false, xp: 3 },
+                    { id: 'i2', title: 'File System Implementation', done: false, xp: 3 }
+                ],
+                skip: [
+                    { id: 's1', title: 'History of Operating Systems', done: false, xp: 1 }
+                ]
+            },
+            activeTopicId: null,
+            activePriority: null
+        };
 
-  // Set local JS state immediately (instant UI)
-  tQueue = detected.map(q => ({ text: q, done: false }));
-  tIdx   = 0;
-  renderQueue();
-  switchTab('timer');
-  toast('Session loaded in Timer');
+        const ranks = [
+            { threshold: 0, name: 'Unprepared', copy: { 'locked-in': 'Cooked 💀', 'academic': 'Unprepared', 'casual': 'Not great' } },
+            { threshold: 20, name: 'Surviving', copy: { 'locked-in': 'Surviving 🤕', 'academic': 'Basic Competence', 'casual': 'Hanging in there' } },
+            { threshold: 40, name: 'Getting There', copy: { 'locked-in': 'Locked In 😤', 'academic': 'Proficient', 'casual': 'Getting There' } },
+            { threshold: 60, name: 'Exam Ready', copy: { 'locked-in': 'Exam Ready 🔥', 'academic': 'Advanced', 'casual': 'Ready to pass' } },
+            { threshold: 80, name: 'Topper Mode', copy: { 'locked-in': 'Academic Weapon 👑', 'academic': 'Mastery', 'casual': 'Topper Mode' } }
+        ];
 
-  // Persist to backend so queue survives tab switches
-  try {
-    await fetch(`${BASE}/save-queue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questions: detected })
-    });
-  } catch(e) {
-    console.warn('[Timer] Could not save queue to backend:', e);
-    // Non-fatal — queue is already in JS memory
-  }
-}
+        // --- UI UTILS ---
+        function showToast(msg, type = 'purple') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'orange' ? 'flame' : (type === 'pink' ? 'zap' : 'check-circle');
+            toast.innerHTML = `<i data-lucide="${icon}" style="color: var(--neon-${type})"></i> <span style="font-weight:500;">${msg}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
-/* ══════════════════════════════════════
-   loadQueueFromBackend — NEW: restores queue when Timer tab opens empty
-══════════════════════════════════════ */
-async function loadQueueFromBackend() {
-  try {
-    const res  = await fetch(`${BASE}/get-queue`);
-    const data = await res.json();
-    const qs   = data.questions || [];
-    if (qs.length > 0) {
-      tQueue = qs; // each item is already { text, done }
-      tIdx   = qs.findIndex(q => !q.done);
-      if (tIdx < 0) tIdx = 0;
-      renderQueue();
-      toast(`${qs.length} questions restored in Timer`);
-    }
-  } catch(e) {
-    console.warn('[Timer] Could not load queue from backend:', e);
-  }
-}
+        // --- STAGE -1 -> 0 : TONE SETTING ---
+        function lockInTone() {
+            session.tone = document.getElementById('tone-select').value;
+            
+            // Dynamic Copy Update based on Tone
+            if(session.tone === 'locked-in') {
+                document.getElementById('copy-stage0-title').innerText = "Drop the payload.";
+                document.getElementById('copy-stage0-sub').innerText = "Syllabus, question bank, or messy notes. Let the engine cook.";
+                document.getElementById('copy-level').innerText = "Survival Strategy";
+                document.getElementById('btn-process').innerHTML = `Run Strategy Engine <i data-lucide="cpu" size="18"></i>`;
+                document.getElementById('copy-nav-dash').innerText = "War Room";
+            } else if (session.tone === 'academic') {
+                document.getElementById('copy-stage0-title').innerText = "Input Academic Material";
+                document.getElementById('copy-stage0-sub').innerText = "Provide your syllabus or question set for structural analysis.";
+                document.getElementById('copy-level').innerText = "Target Proficiency";
+                document.getElementById('btn-process').innerHTML = `Initiate Analysis <i data-lucide="cpu" size="18"></i>`;
+                document.getElementById('copy-nav-dash').innerText = "Dashboard";
+            } else {
+                document.getElementById('copy-stage0-title').innerText = "What are we studying?";
+                document.getElementById('copy-stage0-sub').innerText = "Paste your stuff here and we'll make a plan.";
+                document.getElementById('copy-level').innerText = "Goal";
+                document.getElementById('btn-process').innerHTML = `Make Study Plan <i data-lucide="cpu" size="18"></i>`;
+                document.getElementById('copy-nav-dash').innerText = "Overview";
+            }
 
-/* ══ STUDY PLANNER ══ */
-async function generatePlan() {
-  const questions = document.getElementById('pl-questions').value.trim();
-  const days      = parseInt(document.getElementById('pl-days').value) || 5;
-  const level     = document.getElementById('pl-level').value;
-  const tone      = document.getElementById('pl-tone').value;
-  if (!questions) { toast('Enter questions to generate plan', 'err'); return; }
-  showL('pl-loader');
-  document.getElementById('pl-results').classList.add('hidden');
-  try {
-    const res  = await fetch(`${BASE}/generate-plan`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ questions, days, level, tone })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderPlan(data);
-    toast('Matrix generated successfully');
-  } catch(e) {
-    toast(e.message || 'Failed to generate plan', 'err');
-  } finally { hideL('pl-loader'); }
-}
+            document.getElementById('phase-vibe').classList.remove('active');
+            document.getElementById('phase-1').classList.add('active');
+        }
 
-function renderPlan({ table, day_plan, meta }) {
-  const h = table.filter(r => r.priority==='High').length;
-  document.getElementById('pl-stats').innerHTML = `
-    <div class="stat-card"><div class="stat-num">${table.length}</div><div class="stat-lbl">Targets</div></div>
-    <div class="stat-card"><div class="stat-num">${meta?.days || Object.keys(day_plan).length}</div><div class="stat-lbl">Days</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#f9a8d4;-webkit-text-fill-color:#f9a8d4">${h}</div><div class="stat-lbl">Critical Priority</div></div>`;
-  const tbody = document.getElementById('pl-tbody');
-  tbody.innerHTML = '';
-  table.forEach((row, i) => {
-    tbody.innerHTML += `
-      <tr>
-        <td style="color:var(--muted)">${i+1}</td>
-        <td>${esc(row.question)}</td>
-        <td><span class="pill ${pillClass(row.priority)}">${row.priority}</span></td>
-        <td style="color:var(--muted)">${row.estimated_time}</td>
-        <td><button class="btn btn-ghost" style="font-size:11px;padding:6px 12px"
-            onclick="quickAns('${escA(row.question)}')">Answer <i data-lucide="chevron-right" class="icon"></i></button></td>
-      </tr>`;
-  });
-  const dg = document.getElementById('pl-days-grid');
-  dg.innerHTML = '';
-  for (const [day, qs] of Object.entries(day_plan)) {
-    dg.innerHTML += `
-      <div class="day-card">
-        <div class="day-label"><i data-lucide="calendar"></i> ${day}</div>
-        ${qs.map(q => `<div class="day-q"><i data-lucide="corner-down-right"></i> <span>${esc(q)}</span></div>`).join('')}
-      </div>`;
-  }
-  document.getElementById('pl-results').classList.remove('hidden');
-  refreshIcons();
-}
+        // --- STAGE 0 -> 2 -> 3 : INPUT PROCESSING ---
+        function processInput() {
+            const text = document.getElementById('raw-input').value;
+            if(!text) { showToast("Provide some input data first", "pink"); return; }
 
-function clearPlan() {
-  document.getElementById('pl-questions').value = '';
-  document.getElementById('pl-results').classList.add('hidden');
-}
+            document.getElementById('phase-1').classList.remove('active');
+            document.getElementById('phase-2').classList.add('active');
 
-function quickAns(q) {
-  document.getElementById('ans-q').value = q;
-  switchTab('answer');
-}
+            // Simulate Pipeline
+            const logs = [
+                "[SYS] Cleaning junk characters...",
+                "[SYS] Splitting into logical topics...",
+                "[SYS] Detecting input type: SYLLABUS...",
+                "[SYS] Running Strategy Engine: Classifying Priority...",
+                "[SYS] Building Priority Matrix...",
+                "[SYS] Session Created. Booting UI..."
+            ];
+            
+            let i = 0;
+            const logInt = setInterval(() => {
+                document.getElementById('proc-log').innerText = logs[i];
+                if(i === 2) document.getElementById('proc-text').innerText = "Applying Strategy Engine...";
+                if(i === 4) document.getElementById('proc-text').innerText = "Building Matrix...";
+                i++;
+                if(i >= logs.length) {
+                    clearInterval(logInt);
+                    initDashboard();
+                }
+            }, 600);
+        }
 
-/* ══ ANSWER GENERATOR ══ */
-async function generateAnswer() {
-  const question = document.getElementById('ans-q').value.trim();
-  const level    = document.getElementById('ans-level').value;
-  const tone     = document.getElementById('ans-tone').value;
-  if (!question) { toast('Provide a question first', 'err'); return; }
-  const msgs = { focused:'Running deep extraction...', quick:'Synthesizing bullets...', exam:'Formatting exam layout...' };
-  document.getElementById('ans-loader-msg').textContent = msgs[mode];
-  showL('ans-loader');
-  document.getElementById('ans-out').classList.add('hidden');
-  try {
-    const res  = await fetch(`${BASE}/generate-answer`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ question, mode, level, tone })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderAnswer(data);
-    toast('Output generated');
-  } catch(e) {
-    toast(e.message || 'Processing failed', 'err');
-  } finally { hideL('ans-loader'); }
-}
+        function initDashboard() {
+            document.getElementById('phase-2').classList.remove('active');
+            document.getElementById('phase-3').classList.add('active');
+            renderMatrix();
+            updateGamification();
+        }
 
-function renderAnswer(data) {
-  const grid = document.getElementById('ans-grid');
-  grid.innerHTML = '';
-  if (mode === 'exam') {
-    grid.innerHTML = ansBlock('file-text', 'Exam Outline', data.answer, true);
-  } else {
-    if (data.analogy)       grid.innerHTML += ansBlock('lightbulb', 'Core Analogy', data.analogy);
-    if (data.understanding) grid.innerHTML += ansBlock('search', 'Concept Breakdown', data.understanding);
-    if (data.answer)        grid.innerHTML += ansBlock('pen-tool', 'Structured Answer', data.answer, true);
-    if (data.extra)         grid.innerHTML += ansBlock('star', 'Pro Tip', data.extra);
-  }
-  document.getElementById('ans-out').classList.remove('hidden');
-  refreshIcons();
-}
+        // --- STAGE 4: EXECUTION LOOP ---
+        function renderMatrix() {
+            ['critical', 'important', 'skip'].forEach(prio => {
+                const col = document.getElementById(`col-${prio}`);
+                // keep header
+                const header = col.firstElementChild;
+                col.innerHTML = '';
+                col.appendChild(header);
 
-function ansBlock(icon, label, text, full = false) {
-  const id = 'ab' + Math.random().toString(36).slice(2,8);
-  return `
-    <div class="ans-block ${full?'full':''}">
-      <div class="ans-label"><i data-lucide="${icon}"></i> ${label}</div>
-      <div class="ans-text" id="${id}">${esc(text)}</div>
-      <button class="copy-btn" onclick="copyText(document.getElementById('${id}'),this)"><i data-lucide="copy"></i> Copy</button>
-    </div>`;
-}
+                session.topics[prio].forEach(topic => {
+                    const card = document.createElement('div');
+                    card.className = `topic-card ${prio} ${topic.done ? 'done' : ''}`;
+                    card.innerHTML = `<div style="font-weight: 500; font-size: 0.95rem;">${topic.title}</div>`;
+                    card.onclick = () => openTopic(topic.id, prio, topic.title, topic.done);
+                    col.appendChild(card);
+                });
+            });
+        }
 
-function clearAnswer() {
-  document.getElementById('ans-q').value = '';
-  document.getElementById('ans-out').classList.add('hidden');
-  document.getElementById('img-out').classList.add('hidden');
-}
+        const panel = document.getElementById('answer-panel');
+        
+        function openTopic(id, priority, title, isDone) {
+            session.activeTopicId = id;
+            session.activePriority = priority;
 
-/* ══ IMAGES ══ */
-async function fetchImages() {
-  const q = document.getElementById('ans-q').value.trim();
-  if (!q) { toast('Enter a topic to fetch diagrams', 'err'); return; }
-  const topic = q.split(' ').slice(0,4).join(' ');
-  document.getElementById('ans-loader-msg').textContent = 'Fetching visual assets...';
-  showL('ans-loader');
-  document.getElementById('img-out').classList.add('hidden');
-  try {
-    const res  = await fetch(`${BASE}/get-images`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ topic })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderImages(data.images || []);
-  } catch(e) {
-    toast(e.message || 'Image retrieval failed', 'err');
-  } finally { hideL('ans-loader'); }
-}
+            document.getElementById('panel-priority-label').innerText = `${priority} TOPIC`;
+            document.getElementById('panel-priority-label').style.color = priority === 'critical' ? 'var(--neon-orange)' : (priority === 'important' ? 'var(--neon-pink)' : 'var(--text-muted)');
+            document.getElementById('panel-title').innerText = title;
+            
+            const btn = document.getElementById('btn-complete');
+            if(isDone) {
+                btn.innerHTML = `Completed <i data-lucide="check-check" size="18"></i>`;
+                btn.style.background = 'transparent';
+                btn.style.border = '1px solid var(--neon-blue)';
+                btn.style.color = 'var(--neon-blue)';
+            } else {
+                btn.innerHTML = `Mark Complete <i data-lucide="check-circle" size="18"></i>`;
+                btn.style.background = 'var(--neon-purple)';
+                btn.style.border = '1px solid var(--neon-purple)';
+                btn.style.color = 'white';
+            }
 
-function renderImages(urls) {
-  const row = document.getElementById('img-row');
-  row.innerHTML = urls.length
-    ? urls.map(u => `<div class="img-thumb" onclick="window.open('${u}','_blank')"><img src="${u}" loading="lazy" onerror="this.parentElement.style.display='none'"/></div>`).join('')
-    : '<div class="empty"><i data-lucide="image-off"></i> No diagrams located for this context.</div>';
-  document.getElementById('img-out').classList.remove('hidden');
-  refreshIcons();
-}
+            document.getElementById('panel-answer-content').innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+                    <i data-lucide="cpu" class="spin" size="18" style="animation: spin 2s linear infinite;"></i> Generating optimal answer...
+                </div>
+            `;
+            lucide.createIcons();
+            panel.classList.add('active');
 
-/* ══ TIMER ══ */
-const CIRC = 2 * Math.PI * 88;
+            setTimeout(() => {
+                document.getElementById('panel-answer-content').innerHTML = `
+                    <strong style="color: var(--neon-purple);">${title} Breakdown</strong><br><br>
+                    • Core Concept: Explanation tailored to a ${session.tone} user.<br>
+                    • Mechanism: Step by step breakdown.<br>
+                    • Mnemonic: How to remember it instantly.<br><br>
+                    <em>Note: In production, this hits the Answer Engine API with the selected parameters.</em>
+                `;
+            }, 800);
+        }
 
-function tFmt(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+        function closePanel() {
+            panel.classList.remove('active');
+            session.activeTopicId = null;
+        }
 
-function tRender() {
-  document.getElementById('t-time').textContent = tFmt(tSec);
-  document.getElementById('t-bar').style.strokeDashoffset = CIRC * (1 - tSec / tTotal);
-  document.getElementById('t-sub').textContent = tQueue.length
-    ? `Target ${tIdx+1} of ${tQueue.length}` : 'System Ready';
-}
+        // --- STAGE 5: GAMIFICATION ENGINE ---
+        function markComplete() {
+            if(!session.activeTopicId) return;
 
-function tStart() {
-  if (tRunning) return;
-  tRunning = true;
-  document.getElementById('btn-start').disabled = true;
-  document.getElementById('btn-pause').disabled = false;
-  tInterval = setInterval(() => {
-    tSec--;
-    tRender();
-    if (tSec <= 0) {
-      clearInterval(tInterval); tRunning = false;
-      document.getElementById('btn-start').disabled = false;
-      document.getElementById('btn-pause').disabled = true;
-      if (tQueue.length) {
-        tQueue[tIdx].done = true;
-        tIdx = Math.min(tIdx+1, tQueue.length-1);
-        renderQueue();
-      }
-      toast('Session complete. Initiating break cycle. ⏰');
-      tSec = tTotal; tRender();
-    }
-  }, 1000);
-}
+            const topic = session.topics[session.activePriority].find(t => t.id === session.activeTopicId);
+            if(topic.done) {
+                closePanel();
+                return; // already done
+            }
 
-function tPause() {
-  clearInterval(tInterval); tRunning = false;
-  document.getElementById('btn-start').disabled = false;
-  document.getElementById('btn-pause').disabled = true;
-}
+            // Mark done
+            topic.done = true;
+            session.xp += topic.xp;
+            
+            // Re-render
+            renderMatrix();
+            closePanel();
+            updateGamification();
+            updateNextAction();
 
-/* ══════════════════════════════════════
-   tReset — PATCHED: also clears backend queue
-══════════════════════════════════════ */
-function tReset() {
-  tPause();
-  tSec = tTotal;
-  tRender();
-  // Clear backend queue on reset
-  fetch(`${BASE}/clear-queue`, { method: 'POST' }).catch(() => {});
-}
+            // Micro Feedback
+            let msgs = [];
+            if(session.tone === 'locked-in') {
+                msgs = ["Big W. Keep pushing.", "Topic cleared. You're getting less cooked.", "+XP. Stay locked in."];
+            } else if (session.tone === 'academic') {
+                msgs = ["Module mastered. Proceeding.", "Knowledge retention logged.", "Syllabus coverage increased."];
+            } else {
+                msgs = ["Great job!", "One step closer!", "Awesome work."];
+            }
+            
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            const color = session.activePriority === 'critical' ? 'orange' : 'pink';
+            showToast(`${msg} (+${topic.xp} XP)`, color);
+        }
 
-function tSetCustom() {
-  const m = parseInt(document.getElementById('t-mins').value) || 25;
-  tPause(); tTotal = m*60; tSec = tTotal; tRender();
-  toast(`Session locked to ${m} minutes`);
-}
+        function updateGamification() {
+            // Calc total possible XP
+            let totalXp = 0;
+            ['critical', 'important', 'skip'].forEach(p => {
+                session.topics[p].forEach(t => totalXp += t.xp);
+            });
 
-function renderQueue() {
-  const el = document.getElementById('t-queue-list');
-  if (!tQueue.length) {
-    el.innerHTML = '<div class="empty"><i data-lucide="inbox"></i> No targets queued.<br>Use "Timer →" from Breakdown tab.</div>';
-    refreshIcons();
-    return;
-  }
-  el.innerHTML = tQueue.map((item, i) => {
-    const state = item.done ? 'done' : i===tIdx ? 'active' : '';
-    const dot   = item.done ? 'done' : i===tIdx ? 'active' : 'pending';
-    return `<div class="q-item ${state}"><div class="q-dot ${dot}"></div><span>${esc(item.text)}</span></div>`;
-  }).join('');
-  refreshIcons();
-}
+            const pct = Math.min(100, Math.round((session.xp / totalXp) * 100));
+            session.score = pct;
 
-tRender();
-</script>
+            // UI Update Ring
+            document.getElementById('ui-ring').style.setProperty('--pct', `${pct}%`);
+            document.getElementById('ui-score').innerText = `${pct}%`;
+            
+            if(pct < 30) document.getElementById('copy-score-status').innerText = "In Danger Zone";
+            else if(pct < 70) document.getElementById('copy-score-status').innerText = "Gaining Ground";
+            else document.getElementById('copy-score-status').innerText = "Secured";
+
+            // Rank Logic
+            let currentRank = ranks[0];
+            let nextRank = ranks[1];
+            for(let i = 0; i < ranks.length; i++) {
+                if(pct >= ranks[i].threshold) {
+                    currentRank = ranks[i];
+                    nextRank = ranks[i+1] || null;
+                }
+            }
+            
+            document.getElementById('ui-rank').innerText = currentRank.copy[session.tone];
+            
+            if(nextRank) {
+                const xpNeeded = Math.round((nextRank.threshold / 100) * totalXp) - session.xp;
+                document.getElementById('ui-points').innerText = `${Math.max(1, xpNeeded)} XP to next`;
+            } else {
+                document.getElementById('ui-points').innerText = `MAX RANK`;
+            }
+        }
+
+        // --- STAGE 6: NEXT BEST ACTION ENGINE ---
+        function updateNextAction() {
+            // Find first undone critical, then important
+            let next = session.topics.critical.find(t => !t.done);
+            let pType = 'critical';
+            
+            if(!next) {
+                next = session.topics.important.find(t => !t.done);
+                pType = 'important';
+            }
+
+            const banner = document.getElementById('next-action-banner');
+            if(next) {
+                document.getElementById('ui-next-topic').innerText = next.title;
+                banner.querySelector('button').onclick = () => openTopic(next.id, pType, next.title, false);
+            } else {
+                document.getElementById('ui-next-topic').innerText = "Syllabus Completed. You are ready.";
+                banner.querySelector('button').style.display = 'none';
+                banner.style.borderColor = 'var(--neon-purple)';
+                banner.style.boxShadow = 'var(--glow-purple)';
+            }
+        }
+
+    </script>
 </body>
 </html>
