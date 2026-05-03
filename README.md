@@ -1,140 +1,187 @@
-# ExamCram AI v2 — Gemini + SerpAPI Edition
+# ExamCram AI — Backend
 
-A modular Flask backend for generating study plans and AI-powered answers.
+> Deterministic exam strategy engine. Drop your syllabus. Get a survival plan.
 
 ---
 
-## Project Structure
+## Stack
 
-```
-examcram_v2/
-├── app.py                  ← All Flask routes
-├── .env                    ← Your API keys (never commit this)
-├── requirements.txt
-└── utils/
-    ├── __init__.py
-    ├── priority.py         ← Study plan logic (pure Python, no API)
-    ├── ai_handler.py       ← Gemini AI with 4-model fallback chain
-    └── image_fetcher.py    ← SerpAPI Google Images fetcher
-```
+- **Flask** — lightweight API server
+- **Google Gemini** (via `google-generativeai`) — AI engine
+- **SerpAPI** — diagram image fetching
+- **In-memory sessions** — zero external dependencies for storage
 
 ---
 
 ## Setup
 
+### 1. Install dependencies
+
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
-
-# 2. Add your API keys to .env
-#    GEMINI_API_KEY  → https://aistudio.google.com/app/apikey  (free)
-#    SERPAPI_KEY     → https://serpapi.com                      (100 free/month)
-
-# 3. Run the server
-python app.py
-# → http://localhost:5000
 ```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
+```
+
+### 3. Run
+
+```bash
+python app.py
+```
+
+Server starts on `http://localhost:5000`
 
 ---
 
 ## API Reference
 
-### POST /generate-plan
+### `POST /start-analysis`
+
+Full pipeline: input → clean → detect → classify → plan → session.
 
 **Request:**
 ```json
 {
-  "questions": "Define osmosis\nExplain Newton's laws\nAnalyze climate change",
+  "content": "raw syllabus or question bank text",
   "days": 3,
-  "level": "intermediate",
-  "tone": "formal"
+  "level": "standard",
+  "tone": "locked-in"
 }
 ```
 
 **Response:**
 ```json
 {
-  "table": [
-    { "question": "Define osmosis", "priority": "High", "estimated_time": "10–15 mins" },
-    { "question": "Explain Newton's laws", "priority": "Medium", "estimated_time": "20–30 mins" },
-    { "question": "Analyze climate change", "priority": "Low", "estimated_time": "40–60 mins" }
-  ],
-  "day_plan": {
-    "Day 1": ["Define osmosis"],
-    "Day 2": ["Explain Newton's laws"],
-    "Day 3": ["Analyze climate change"]
+  "session_id": "uuid",
+  "meta": {
+    "input_type": "syllabus | question_bank",
+    "subject": "Operating Systems",
+    "total_questions": 18,
+    "readiness_score": 12
   },
-  "meta": { "total_questions": 3, "days": 3, "level": "intermediate", "tone": "formal" }
+  "matrix": {
+    "critical": [{ "question": "...", "priority": "critical", "reason": "...", "estimated_time": "20 min" }],
+    "important": [...],
+    "skip": [...]
+  },
+  "plan": {
+    "day_1": ["question1", "question2"],
+    "day_2": [...]
+  }
 }
 ```
 
 ---
 
-### POST /generate-answer
+### `POST /generate-answer`
+
+Generate a study answer in one of three modes.
 
 **Request:**
 ```json
 {
-  "question": "Explain Newton's second law",
-  "mode": "focused",
-  "level": "beginner",
-  "tone": "casual"
+  "session_id": "uuid",
+  "topic": "Process Scheduling Algorithms",
+  "mode": "focused | revision | exam"
 }
 ```
 
 **Response:**
 ```json
 {
-  "analogy": "Pushing a shopping cart — harder push = faster cart.",
-  "understanding": "Force equals mass times acceleration (F=ma).",
-  "answer": "Newton's second law states...",
-  "extra": "Common mistake: forgetting force and acceleration are vectors."
+  "concept": "Core explanation...",
+  "answer": "• Bullet 1\n• Bullet 2...",
+  "mnemonic": "Remember it as...",
+  "diagram_query": "process scheduling diagram labeled"
 }
 ```
 
-`mode` options: `"focused"` (detailed) or `"quick"` (bullet points)
-
 ---
 
-### POST /get-images
+### `POST /get-diagrams`
+
+Fetch 3 diagram image URLs.
 
 **Request:**
 ```json
-{ "topic": "mitosis cell division" }
+{ "query": "process scheduling diagram labeled" }
+```
+
+**Response:**
+```json
+{ "images": ["url1", "url2", "url3"] }
+```
+
+---
+
+### `POST /mark-complete`
+
+Mark a topic done and update progress/rank.
+
+**Request:**
+```json
+{
+  "session_id": "uuid",
+  "topic": "Process Scheduling Algorithms"
+}
 ```
 
 **Response:**
 ```json
 {
-  "images": [
-    "https://...",
-    "https://...",
-    "https://..."
-  ]
+  "progress_score": 45,
+  "rank": "Getting There",
+  "message": "Critical topic cleared. Big W."
 }
 ```
 
 ---
 
-## Gemini Fallback Chain
+## Architecture
 
-| Order | Model | Notes |
-|-------|-------|-------|
-| 1 | `gemini-2.0-flash-lite` | Fastest, lowest cost |
-| 2 | `gemma-3-27b-it` | Open model backup |
-| 3 | `gemini-1.5-flash` | Reliable general model |
-| 4 | `gemini-1.5-flash-8b` | Last resort |
+```
+app.py                      ← Flask routes + orchestration
+utils/
+  ai_client.py              ← Model fallback chain (Gemini)
+  input_processor.py        ← Clean + detect input type
+  question_generator.py     ← Syllabus → question bank
+  priority_engine.py        ← AI classification + matrix + plan
+  answer_engine.py          ← Focused / Revision / Exam answers
+  diagram_engine.py         ← SerpAPI image fetch
+  session_manager.py        ← In-memory session + XP + rank
+```
 
-If ALL models fail, the app still returns valid JSON (never crashes).
+## AI Model Fallback Chain
+
+Models are tried in order. Auto-switches on failure:
+
+1. `gemini-2.0-flash-lite` (fastest, cheapest)
+2. `gemini-2.5-flash-lite-preview-06-17`
+3. `gemini-2.5-flash`
+4. `gemini-2.0-flash`
+5. `gemma-3-27b-it`
 
 ---
 
-## Priority Logic (for viva)
+## Rank System
 
-| Keyword in question | Priority | Time |
-|---------------------|----------|------|
-| define, list, state | High | 10–15 mins |
-| explain, describe | Medium | 20–30 mins |
-| analyze, compare, derive | Low | 40–60 mins |
+| Score | Rank |
+|-------|------|
+| 0–20  | Unprepared |
+| 20–40 | Surviving |
+| 40–60 | Getting There |
+| 60–80 | Exam Ready |
+| 80–100 | Topper Mode |
 
-Defaults to Medium if no keyword matched.
+## XP Weights
+
+| Priority | XP |
+|----------|-----|
+| Critical | +5 |
+| Important | +3 |
+| Skip | +1 |
